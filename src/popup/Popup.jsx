@@ -14,10 +14,12 @@ function Popup() {
 
     const [tokenExpiryMinutes, setTokenExpiryMinutes] = useState(5)
     const [autoSync, setAutoSync] = useState(false)
+    const [accountNameRegex, setAccountNameRegex] = useState('')
+    const [roleNameRegex, setRoleNameRegex] = useState('')
 
     useEffect(() => {
         // Load accounts and settings
-        chrome.storage.sync.get(['samlUrl', 'tokenExpiryMinutes', 'autoSync'], (items) => {
+        chrome.storage.sync.get(['samlUrl', 'tokenExpiryMinutes', 'autoSync', 'accountNameRegex', 'roleNameRegex'], (items) => {
             if (items.samlUrl) {
                 setSamlUrl(items.samlUrl)
             }
@@ -26,6 +28,12 @@ function Popup() {
             }
             if (items.autoSync !== undefined) {
                 setAutoSync(items.autoSync)
+            }
+            if (items.accountNameRegex) {
+                setAccountNameRegex(items.accountNameRegex)
+            }
+            if (items.roleNameRegex) {
+                setRoleNameRegex(items.roleNameRegex)
             }
         })
 
@@ -184,6 +192,26 @@ function Popup() {
     const minutesSinceSync = lastUpdated ? Math.floor((new Date() - new Date(lastUpdated)) / 60000) : null
     const tokenExpired = minutesSinceSync !== null && minutesSinceSync >= tokenExpiryMinutes
 
+    // Helper functions to clean names using regex
+    const cleanAccountName = (name) => {
+        if (!name || !accountNameRegex) return name
+        try {
+            return name.replace(new RegExp(accountNameRegex), '')
+        } catch (e) {
+            console.error('Invalid account name regex:', e)
+            return name
+        }
+    }
+
+    const cleanRoleName = (name) => {
+        if (!name || !roleNameRegex) return name
+        try {
+            return name.replace(new RegExp(roleNameRegex), '')
+        } catch (e) {
+            console.error('Invalid role name regex:', e)
+            return name
+        }
+    }
 
     // Group accounts by Account ID
     const groupedAccounts = useMemo(() => {
@@ -365,7 +393,7 @@ function Popup() {
                                             {group.accountName && group.accountName !== 'Unknown Account' ? (
                                                 <>
                                                     <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
-                                                        {group.accountName}
+                                                        {cleanAccountName(group.accountName)}
                                                     </span>
                                                     <span style={{ color: '#888', fontSize: '12px', marginLeft: '8px', fontWeight: 'bold' }}>
                                                         ({group.accountId})
@@ -413,7 +441,7 @@ function Popup() {
                                                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e0e0e0'}
                                                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
                                             >
-                                                {role.roleName}
+                                                {cleanRoleName(role.roleName)}
                                             </button>
                                         ))}
                                     </div>
