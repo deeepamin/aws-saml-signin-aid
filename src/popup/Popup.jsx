@@ -7,6 +7,8 @@ function Popup() {
     const [samlUrl, setSamlUrl] = useState('')
     const [loading, setLoading] = useState(false)
 
+    const [favorites, setFavorites] = useState([])
+
     useEffect(() => {
         // Load accounts and settings
         chrome.storage.sync.get(['samlUrl'], (items) => {
@@ -15,16 +17,24 @@ function Popup() {
             }
         })
 
-        chrome.storage.local.get(['availableRoles'], (items) => {
+        chrome.storage.local.get(['availableRoles', 'favorites'], (items) => {
             if (items.availableRoles) {
                 setAccounts(items.availableRoles)
+            }
+            if (items.favorites) {
+                setFavorites(items.favorites)
             }
         })
 
         // Listen for storage changes to update the list in real-time
         const handleStorageChange = (changes, area) => {
-            if (area === 'local' && changes.availableRoles) {
-                setAccounts(changes.availableRoles.newValue)
+            if (area === 'local') {
+                if (changes.availableRoles) {
+                    setAccounts(changes.availableRoles.newValue)
+                }
+                if (changes.favorites) {
+                    setFavorites(changes.favorites.newValue)
+                }
             }
         }
         chrome.storage.onChanged.addListener(handleStorageChange)
@@ -55,6 +65,15 @@ function Popup() {
         })
     }
 
+    const handleToggleFavorite = (accountId) => {
+        const newFavorites = favorites.includes(accountId)
+            ? favorites.filter(id => id !== accountId)
+            : [...favorites, accountId]
+
+        setFavorites(newFavorites)
+        chrome.storage.local.set({ favorites: newFavorites })
+    }
+
     // Group accounts by Account ID
     const groupedAccounts = useMemo(() => {
         const groups = {}
@@ -72,8 +91,19 @@ function Popup() {
             }
             groups[role.accountId].roles.push(role)
         })
-        return Object.values(groups)
-    }, [accounts])
+
+        // Sort: Favorites first, then alphabetical by name
+        return Object.values(groups).sort((a, b) => {
+            const aFav = favorites.includes(a.accountId)
+            const bFav = favorites.includes(b.accountId)
+            if (aFav && !bFav) return -1
+            if (!aFav && bFav) return 1
+
+            const nameA = (a.accountName || a.accountId).toLowerCase()
+            const nameB = (b.accountName || b.accountId).toLowerCase()
+            return nameA.localeCompare(nameB)
+        })
+    }, [accounts, favorites])
 
     // Filter groups based on search query
     const filteredGroups = groupedAccounts.filter(group => {
@@ -132,41 +162,62 @@ function Popup() {
                     </div>
                 ) : (
                     <div>
-                        {filteredGroups.map(group => (
-                            <div key={group.accountId} style={{ marginBottom: '16px', borderBottom: '1px solid #eee', paddingBottom: '12px' }}>
-                                <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'baseline' }}>
-                                    <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
-                                        {group.accountName || 'Unknown Account'}
-                                    </span>
-                                    <span style={{ color: '#888', fontSize: '12px', marginLeft: '8px', fontWeight: 'bold' }}>
-                                        ({group.accountId})
-                                    </span>
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                    {group.roles.map(role => (
+                        {filteredGroups.map(group => {
+                            const isFavorite = favorites.includes(group.accountId)
+                            return (
+                                <div key={group.accountId} style={{ marginBottom: '16px', borderBottom: '1px solid #eee', paddingBottom: '12px' }}>
+                                    <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                                            <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
+                                                {group.accountName || 'Unknown Account'}
+                                            </span>
+                                            <span style={{ color: '#888', fontSize: '12px', marginLeft: '8px', fontWeight: 'bold' }}>
+                                                ({group.accountId})
+                                            </span>
+                                        </div>
                                         <button
-                                            key={role.roleArn}
-                                            onClick={() => handleRoleClick(role)}
-                                            title={role.roleArn}
+                                            onClick={() => handleToggleFavorite(group.accountId)}
                                             style={{
-                                                padding: '4px 10px',
-                                                borderRadius: '12px',
-                                                border: '1px solid #ddd',
-                                                backgroundColor: '#f5f5f5',
+                                                background: 'none',
+                                                border: 'none',
                                                 cursor: 'pointer',
-                                                fontSize: '12px',
-                                                color: '#333',
-                                                transition: 'background-color 0.2s'
+                                                padding: '4px',
+                                                color: isFavorite ? '#FFD700' : '#ccc',
+                                                fontSize: '18px',
+                                                lineHeight: 1,
+                                                marginTop: '4px'
                                             }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e0e0e0'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                            title={isFavorite ? "Unfavorite" : "Favorite"}
                                         >
-                                            {role.roleName}
+                                            ★
                                         </button>
-                                    ))}
+                                    </div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        {group.roles.map(role => (
+                                            <button
+                                                key={role.roleArn}
+                                                onClick={() => handleRoleClick(role)}
+                                                title={role.roleArn}
+                                                style={{
+                                                    padding: '4px 10px',
+                                                    borderRadius: '12px',
+                                                    border: '1px solid #ddd',
+                                                    backgroundColor: '#f5f5f5',
+                                                    cursor: 'pointer',
+                                                    fontSize: '12px',
+                                                    color: '#333',
+                                                    transition: 'background-color 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e0e0e0'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                            >
+                                                {role.roleName}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 )}
             </div>
