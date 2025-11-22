@@ -1,0 +1,25 @@
+{
+    "manifest_version": 3,
+    "name": "AWS SAML Sign-In Aid",
+    "description": "Easily access your AWS accounts from any SAML provider with a click of a button, instead of using the AWS SAML Sign-In page.",
+    "version": "1.0.0",
+    "action": {
+        "default_popup": "src/popup/popup.html"
+    },
+    "options_page": "src/options/options.html",
+    "background": {
+        "service_worker": "src/background/index.js",
+        "type": "module"
+    },
+    "permissions": [
+        "storage",
+        "webRequest",
+        "tabs",
+        "scripting"
+    ],
+    "host_permissions": [
+        "https://signin.aws.amazon.com/*",
+        "https://*.signin.aws.amazon.com/*",
+        "https://sts.amazonaws.com/*"
+    ]
+}
