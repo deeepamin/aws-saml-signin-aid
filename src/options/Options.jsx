@@ -4,23 +4,27 @@ import ReactDOM from 'react-dom/client'
 function Options() {
     const [url, setUrl] = useState('')
     const [backgroundSync, setBackgroundSync] = useState(true) // Default to true
+    const [tokenExpiryMinutes, setTokenExpiryMinutes] = useState(5) // Default to 5
     const [status, setStatus] = useState('')
 
     useEffect(() => {
         // Restore options from chrome.storage
-        chrome.storage.sync.get(['samlUrl', 'backgroundSync'], (items) => {
+        chrome.storage.sync.get(['samlUrl', 'backgroundSync', 'tokenExpiryMinutes'], (items) => {
             if (items.samlUrl) {
                 setUrl(items.samlUrl)
             }
             // Default to true if not set
             setBackgroundSync(items.backgroundSync !== undefined ? items.backgroundSync : true)
+            // Default to 5 if not set
+            setTokenExpiryMinutes(items.tokenExpiryMinutes !== undefined ? items.tokenExpiryMinutes : 5)
         })
     }, [])
 
     const saveOptions = () => {
         chrome.storage.sync.set({
             samlUrl: url,
-            backgroundSync: backgroundSync
+            backgroundSync: backgroundSync,
+            tokenExpiryMinutes: parseInt(tokenExpiryMinutes)
         }, () => {
             setStatus('Options saved.')
             setTimeout(() => {
@@ -30,48 +34,149 @@ function Options() {
     }
 
     return (
-        <div style={{ padding: '20px', fontFamily: 'sans-serif', minWidth: '300px' }}>
-            <h1>AWS SAML Sign-In Aid</h1>
-            <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px' }}>
-                    SAML Token URL:
-                </label>
-                <input
-                    type="text"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-                    placeholder="https://example.com/saml"
-                />
-            </div>
-            <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+        <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            padding: '40px 20px',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+            color: '#333'
+        }}>
+            <div style={{
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                border: '1px solid #e5e7eb',
+                width: '100%',
+                maxWidth: '800px',
+                padding: '24px'
+            }}>
+                <h1 style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    margin: '0 0 24px 0',
+                    color: '#111827'
+                }}>
+                    Options
+                </h1>
+
+                <div style={{ marginBottom: '24px' }}>
+                    <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        marginBottom: '8px',
+                        color: '#374151'
+                    }}>
+                        SAML Token URL
+                    </label>
                     <input
-                        type="checkbox"
-                        checked={backgroundSync}
-                        onChange={(e) => setBackgroundSync(e.target.checked)}
-                        style={{ marginRight: '8px', cursor: 'pointer' }}
+                        type="text"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #d1d5db',
+                            fontSize: '14px',
+                            boxSizing: 'border-box',
+                            outline: 'none',
+                            transition: 'border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#2274A5'}
+                        onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                        placeholder="https://example.com/saml"
                     />
-                    <span>Sync in background (recommended)</span>
-                </label>
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', marginLeft: '24px' }}>
-                    When enabled, the SAML URL opens in a background tab without focus. When disabled, tab with SAML URL will be focused.
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
+                        URL used for signing in to AWS console via SAML provider (e.g., Azure AD) which issues the SAML token.
+                    </div>
                 </div>
+
+                <div style={{ marginBottom: '24px' }}>
+                    <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        marginBottom: '8px',
+                        color: '#374151'
+                    }}>
+                        Token Expiry Warning (minutes)
+                    </label>
+                    <input
+                        type="number"
+                        min="1"
+                        value={tokenExpiryMinutes}
+                        onChange={(e) => setTokenExpiryMinutes(e.target.value)}
+                        style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #d1d5db',
+                            fontSize: '14px',
+                            boxSizing: 'border-box',
+                            outline: 'none'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#2274A5'}
+                        onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                    />
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
+                        Show expired warning after this many minutes (default: 5).
+                    </div>
+                </div>
+
+                <div style={{ marginBottom: '32px' }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={backgroundSync}
+                            onChange={(e) => setBackgroundSync(e.target.checked)}
+                            style={{
+                                marginTop: '3px',
+                                marginRight: '10px',
+                                cursor: 'pointer',
+                                accentColor: '#2274A5'
+                            }}
+                        />
+                        <div>
+                            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Sync in background (recommended)</span>
+                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                                When enabled, the SAML URL opens in a background tab without focus. When disabled, tab with SAML URL will be focused.
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <button
+                    onClick={saveOptions}
+                    style={{
+                        padding: '10px 20px',
+                        backgroundColor: '#2274A5',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        transition: 'background-color 0.2s'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = '#1a5c85'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = '#2274A5'}
+                >
+                    Save
+                </button>
+
+                {status && (
+                    <div style={{
+                        marginTop: '16px',
+                        color: '#059669',
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center'
+                    }}>
+                        <span style={{ marginRight: '6px' }}>✓</span> {status}
+                    </div>
+                )}
             </div>
-            <button
-                onClick={saveOptions}
-                style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                }}
-            >
-                Save
-            </button>
-            {status && <div style={{ marginTop: '10px', color: 'green' }}>{status}</div>}
         </div>
     )
 }

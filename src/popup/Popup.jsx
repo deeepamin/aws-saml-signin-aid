@@ -8,24 +8,33 @@ function Popup() {
     const [loading, setLoading] = useState(false)
 
     const [favorites, setFavorites] = useState([])
+    const [lastUpdated, setLastUpdated] = useState(null)
 
     const searchInputRef = useRef(null)
 
+    const [tokenExpiryMinutes, setTokenExpiryMinutes] = useState(5)
+
     useEffect(() => {
         // Load accounts and settings
-        chrome.storage.sync.get(['samlUrl'], (items) => {
+        chrome.storage.sync.get(['samlUrl', 'tokenExpiryMinutes'], (items) => {
             if (items.samlUrl) {
                 setSamlUrl(items.samlUrl)
             }
+            if (items.tokenExpiryMinutes) {
+                setTokenExpiryMinutes(items.tokenExpiryMinutes)
+            }
         })
 
-        chrome.storage.local.get(['availableRoles', 'favorites', 'scrapingComplete'], (items) => {
+        chrome.storage.local.get(['availableRoles', 'favorites', 'scrapingComplete', 'lastUpdated'], (items) => {
             console.log('Initial load - scrapingComplete:', items.scrapingComplete)
             if (items.availableRoles) {
                 setAccounts(items.availableRoles)
             }
             if (items.favorites) {
                 setFavorites(items.favorites)
+            }
+            if (items.lastUpdated) {
+                setLastUpdated(items.lastUpdated)
             }
             // Only turn off loading if scrapingComplete is explicitly true or undefined (not syncing)
             // If it's false, we're in the middle of syncing
@@ -54,6 +63,9 @@ function Popup() {
                 }
                 if (changes.favorites) {
                     setFavorites(changes.favorites.newValue)
+                }
+                if (changes.lastUpdated) {
+                    setLastUpdated(changes.lastUpdated.newValue)
                 }
                 if (changes.scrapingComplete) {
                     console.log('scrapingComplete changed to:', changes.scrapingComplete.newValue)
@@ -148,6 +160,26 @@ function Popup() {
         setFavorites(newFavorites)
         chrome.storage.local.set({ favorites: newFavorites })
     }
+
+    // Calculate time since last sync
+    const getTimeSinceSync = () => {
+        if (!lastUpdated) return null
+        const now = new Date()
+        const updated = new Date(lastUpdated)
+        const diffMs = now - updated
+        const diffMins = Math.floor(diffMs / 60000)
+
+        if (diffMins < 1) return 'just now'
+        if (diffMins === 1) return '1 minute ago'
+        if (diffMins < 60) return `${diffMins} minutes ago`
+        const diffHours = Math.floor(diffMins / 60)
+        if (diffHours === 1) return '1 hour ago'
+        return `${diffHours} hours ago`
+    }
+
+    const minutesSinceSync = lastUpdated ? Math.floor((new Date() - new Date(lastUpdated)) / 60000) : null
+    const tokenExpired = minutesSinceSync !== null && minutesSinceSync >= tokenExpiryMinutes
+
 
     // Group accounts by Account ID
     const groupedAccounts = useMemo(() => {
@@ -259,6 +291,22 @@ function Popup() {
 
 
             <hr style={{ border: 'none', borderBottom: '1px solid #999', margin: '8px 0 8px 0', width: '100%' }} />
+
+            {/* Token expiry warning */}
+            {tokenExpired && accounts.length > 0 && (
+                <div style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#ffebee',
+                    border: '1px solid #ef5350',
+                    borderRadius: '4px',
+                    margin: '0 0 8px 0',
+                    fontSize: '12px',
+                    color: '#c62828'
+                }}>
+                    ⚠️ Token expired ({getTimeSinceSync()}), please re-sync.
+                </div>
+            )}
+
             <div style={{ flex: 1, overflowY: 'auto' }}>
                 {loading && accounts.length === 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '40px' }}>
