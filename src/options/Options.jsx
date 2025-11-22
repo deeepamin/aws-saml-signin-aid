@@ -69,24 +69,50 @@ function Options() {
                     }}>
                         SAML Token URL
                     </label>
-                    <input
-                        type="text"
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            borderRadius: '6px',
-                            border: '1px solid #d1d5db',
-                            fontSize: '14px',
-                            boxSizing: 'border-box',
-                            outline: 'none',
-                            transition: 'border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#2274A5'}
-                        onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
-                        placeholder="https://example.com/saml"
-                    />
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <input
+                            type="text"
+                            value={url}
+                            onChange={(e) => setUrl(e.target.value)}
+                            style={{
+                                flex: 1,
+                                padding: '8px 12px',
+                                borderRadius: '6px',
+                                border: '1px solid #d1d5db',
+                                fontSize: '14px',
+                                boxSizing: 'border-box',
+                                outline: 'none',
+                                transition: 'border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = '#2274A5'}
+                            onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                            placeholder="https://example.com/saml"
+                        />
+                        <button
+                            onClick={() => {
+                                if (url) {
+                                    chrome.tabs.create({ url: url, active: true })
+                                }
+                            }}
+                            style={{
+                                padding: '8px 16px',
+                                backgroundColor: '#f3f4f6',
+                                color: '#374151',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                whiteSpace: 'nowrap',
+                                transition: 'background-color 0.2s'
+                            }}
+                            onMouseOver={(e) => e.target.style.backgroundColor = '#e5e7eb'}
+                            onMouseOut={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                            title="Open URL to authenticate"
+                        >
+                            Authenticate
+                        </button>
+                    </div>
                     <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
                         URL used for signing in to AWS console via SAML provider (e.g., Azure AD) which issues the SAML token.
                     </div>

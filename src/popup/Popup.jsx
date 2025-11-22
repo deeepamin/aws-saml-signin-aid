@@ -328,7 +328,27 @@ function Popup() {
                     </div>
                 ) : filteredGroups.length === 0 ? (
                     <div style={{ color: '#666', textAlign: 'center', marginTop: '20px' }}>
-                        {accounts.length === 0 ? 'No accounts found. Click Sync to load.' : 'No matches found.'}
+                        {accounts.length === 0 ? (
+                            !samlUrl ? (
+                                <div>
+                                    <div style={{ marginBottom: '8px' }}>No SAML token URL configured.</div>
+                                    <a
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            chrome.runtime.openOptionsPage()
+                                        }}
+                                        style={{ color: '#2274A5', textDecoration: 'none', fontWeight: '500' }}
+                                    >
+                                        Configure SAML Token URL
+                                    </a>
+                                </div>
+                            ) : (
+                                'No accounts found. Click Sync to load.'
+                            )
+                        ) : (
+                            'No matches found.'
+                        )}
                     </div>
                 ) : (
                     <div>
@@ -399,9 +419,11 @@ function Popup() {
                     </div>
                 )}
             </div>
-            <div style={{ marginTop: '10px', fontSize: '10px', color: '#999', textAlign: 'center' }}>
-                {accounts.length} roles available
-            </div>
+            {accounts.length > 0 && (
+                <div style={{ marginTop: '10px', fontSize: '10px', color: '#999', textAlign: 'center' }}>
+                    {groupedAccounts.length} accounts available
+                </div>
+            )}
         </div>
     )
 }
