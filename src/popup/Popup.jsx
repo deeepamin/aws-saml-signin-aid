@@ -119,42 +119,70 @@ function Popup() {
 
     return (
         <div style={{ padding: '16px', minHeight: '300px', display: 'flex', flexDirection: 'column', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>AWS SAML Sign-In Aid</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '8px' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                    <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#999"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                            position: 'absolute',
+                            left: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            pointerEvents: 'none'
+                        }}
+                    >
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input
+                        type="text"
+                        placeholder="Search"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{
+                            padding: '6px 8px 6px 24px',
+                            borderRadius: '4px',
+                            border: '1px solid #ccc',
+                            width: '100%',
+                            fontSize: '13px',
+                            boxSizing: 'border-box',
+                            textAlign: 'left'
+                        }}
+                    />
+                </div>
                 <button
                     onClick={handleSync}
                     disabled={loading}
+                    title="Sync Accounts"
                     style={{
-                        padding: '6px 12px',
-                        backgroundColor: '#2274A5',
-                        color: 'white',
+                        background: 'none',
                         border: 'none',
-                        borderRadius: '4px',
                         cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: '500'
+                        padding: '4px',
+                        color: '#2274A5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: loading ? 0.5 : 1
                     }}
                 >
-                    {loading ? 'Syncing...' : 'Sync'}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M23 4v6h-6"></path>
+                        <path d="M1 20v-6h6"></path>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
                 </button>
             </div>
 
-            <input
-                type="text"
-                placeholder="Search accounts or roles..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                    padding: '8px',
-                    marginBottom: '16px',
-                    borderRadius: '4px',
-                    border: '1px solid #ccc',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    fontSize: '14px'
-                }}
-            />
 
+            <hr style={{ border: 'none', borderBottom: '1px solid #999', margin: '8px 0 8px 0', width: '100%' }} />
             <div style={{ flex: 1, overflowY: 'auto' }}>
                 {filteredGroups.length === 0 ? (
                     <div style={{ color: '#666', textAlign: 'center', marginTop: '20px' }}>
@@ -165,8 +193,8 @@ function Popup() {
                         {filteredGroups.map(group => {
                             const isFavorite = favorites.includes(group.accountId)
                             return (
-                                <div key={group.accountId} style={{ marginBottom: '16px', borderBottom: '1px solid #eee', paddingBottom: '12px' }}>
-                                    <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div key={group.accountId} style={{ marginBottom: '8px', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>
+                                    <div style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                         <div style={{ display: 'flex', alignItems: 'baseline' }}>
                                             <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
                                                 {group.accountName || 'Unknown Account'}
