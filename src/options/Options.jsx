@@ -68,15 +68,6 @@ function Options() {
                 maxWidth: '800px',
                 padding: '24px'
             }}>
-                <h1 style={{
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    margin: '0 0 24px 0',
-                    color: '#111827'
-                }}>
-                    AWS SAML Sign-In Aid Options
-                </h1>
-
                 {/* Sign-In Options Section */}
                 <div style={{ marginBottom: '32px' }}>
                     <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#374151', marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>
@@ -210,7 +201,7 @@ function Options() {
                                 }}
                             />
                             <div>
-                                <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Sync in background (recommended)</span>
+                                <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Sync in background</span>
                                 <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
                                     When enabled, the SAML URL opens in a background tab without focus. When disabled, tab with SAML URL will be focused.
                                 </div>
