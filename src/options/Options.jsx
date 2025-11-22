@@ -4,17 +4,20 @@ import ReactDOM from 'react-dom/client'
 function Options() {
     const [url, setUrl] = useState('')
     const [backgroundSync, setBackgroundSync] = useState(true) // Default to true
+    const [autoSync, setAutoSync] = useState(false) // Default to false
     const [tokenExpiryMinutes, setTokenExpiryMinutes] = useState(5) // Default to 5
     const [status, setStatus] = useState('')
 
     useEffect(() => {
         // Restore options from chrome.storage
-        chrome.storage.sync.get(['samlUrl', 'backgroundSync', 'tokenExpiryMinutes'], (items) => {
+        chrome.storage.sync.get(['samlUrl', 'backgroundSync', 'tokenExpiryMinutes', 'autoSync'], (items) => {
             if (items.samlUrl) {
                 setUrl(items.samlUrl)
             }
             // Default to true if not set
             setBackgroundSync(items.backgroundSync !== undefined ? items.backgroundSync : true)
+            // Default to false if not set
+            setAutoSync(items.autoSync !== undefined ? items.autoSync : false)
             // Default to 5 if not set
             setTokenExpiryMinutes(items.tokenExpiryMinutes !== undefined ? items.tokenExpiryMinutes : 5)
         })
@@ -24,6 +27,7 @@ function Options() {
         chrome.storage.sync.set({
             samlUrl: url,
             backgroundSync: backgroundSync,
+            autoSync: autoSync,
             tokenExpiryMinutes: parseInt(tokenExpiryMinutes)
         }, () => {
             setStatus('Options saved.')
@@ -67,7 +71,7 @@ function Options() {
                         marginBottom: '8px',
                         color: '#374151'
                     }}>
-                        SAML Token URL
+                        AWS SAML Sign-In URL
                     </label>
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <input
@@ -148,6 +152,28 @@ function Options() {
                     <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
                         Show expired warning after this many minutes (default: 5).
                     </div>
+                </div>
+
+                <div style={{ marginBottom: '24px' }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={autoSync}
+                            onChange={(e) => setAutoSync(e.target.checked)}
+                            style={{
+                                marginTop: '3px',
+                                marginRight: '10px',
+                                cursor: 'pointer',
+                                accentColor: '#2274A5'
+                            }}
+                        />
+                        <div>
+                            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Auto-sync on expiry</span>
+                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                                Automatically refresh the token when it expires. Opens a new invisible window in background and closes it after getting the token.
+                            </div>
+                        </div>
+                    </label>
                 </div>
 
                 <div style={{ marginBottom: '32px' }}>

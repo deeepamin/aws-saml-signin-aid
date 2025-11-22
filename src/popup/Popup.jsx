@@ -13,15 +13,19 @@ function Popup() {
     const searchInputRef = useRef(null)
 
     const [tokenExpiryMinutes, setTokenExpiryMinutes] = useState(5)
+    const [autoSync, setAutoSync] = useState(false)
 
     useEffect(() => {
         // Load accounts and settings
-        chrome.storage.sync.get(['samlUrl', 'tokenExpiryMinutes'], (items) => {
+        chrome.storage.sync.get(['samlUrl', 'tokenExpiryMinutes', 'autoSync'], (items) => {
             if (items.samlUrl) {
                 setSamlUrl(items.samlUrl)
             }
             if (items.tokenExpiryMinutes) {
                 setTokenExpiryMinutes(items.tokenExpiryMinutes)
+            }
+            if (items.autoSync !== undefined) {
+                setAutoSync(items.autoSync)
             }
         })
 
@@ -331,7 +335,7 @@ function Popup() {
                         {accounts.length === 0 ? (
                             !samlUrl ? (
                                 <div>
-                                    <div style={{ marginBottom: '8px' }}>No SAML token URL configured.</div>
+                                    <div style={{ marginBottom: '8px' }}>No AWS SAML Sign-In URL configured.</div>
                                     <a
                                         href="#"
                                         onClick={(e) => {
@@ -340,7 +344,7 @@ function Popup() {
                                         }}
                                         style={{ color: '#2274A5', textDecoration: 'none', fontWeight: '500' }}
                                     >
-                                        Configure SAML Token URL
+                                        Configure AWS SAML Sign-In URL
                                     </a>
                                 </div>
                             ) : (

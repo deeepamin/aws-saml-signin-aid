@@ -41,19 +41,17 @@ chrome.webRequest.onBeforeRequest.addListener(
             if (samlResponse) {
                 console.log('SAML Response found, length:', samlResponse.length)
 
-                const { roles, userEmail } = parseSAMLResponseRegex(samlResponse)
+                const { roles } = parseSAMLResponseRegex(samlResponse)
                 console.log('Parsed roles:', roles)
-                console.log('Parsed userEmail:', userEmail)
 
                 chrome.storage.local.set({
                     samlResponse: samlResponse,
                     availableRoles: roles,
-                    userEmail: userEmail,
                     lastUpdated: new Date().toISOString(),
                     pendingAuthTabId: details.tabId, // Store tab ID for scraping
                     scrapingComplete: false // Mark that we're waiting for account names
                 }, () => {
-                    console.log('SAML Roles and Email saved to storage. Waiting for page load to scrape names...')
+                    console.log('SAML Roles saved to storage. Waiting for page load to scrape names...')
                 })
             } else {
                 console.log('No SAMLResponse found in request body')
@@ -345,75 +343,60 @@ function parseSAMLResponseRegex(samlResponse) {
             }
         }
 
-        // Extract NameID (Email/Username)
-        let userEmail = null
-
-        // Strategy 1: Parse all Attributes
-        const attributes = {}
-        const attributeRegex = /Attribute\s+Name="([^"]+)"[^>]*>[\s\S]*?<[^:]*:?AttributeValue[^>]*>(.*?)<\/[^:]*:?AttributeValue>/gi
-        let attrMatch
-        while ((attrMatch = attributeRegex.exec(decoded)) !== null) {
-            const attrName = attrMatch[1]
-            const attrValue = attrMatch[2].trim()
-            attributes[attrName] = attrValue
-        }
-
-        // Priority list for username
-        const candidates = [
-            'https://aws.amazon.com/SAML/Attributes/RoleSessionName',
-            'urn:oid:0.9.2342.19200300.100.1.3', // mail
-            'urn:oid:0.9.2342.19200300.100.1.1', // uid
-            'urn:oid:2.5.4.3', // cn (common name)
-            'email',
-            'mail',
-            'uid',
-            'cn',
-            'name',
-            'upn',
-            'windowsaccountname'
-        ]
-
-        for (const key of candidates) {
-            if (attributes[key]) {
-                userEmail = attributes[key]
-                console.log('Found username via attribute:', key, userEmail)
-                break
-            }
-        }
-
-        // Strategy 2: NameID
-        if (!userEmail) {
-            const nameIdMatch = decoded.match(/<[^:]*:?NameID[^>]*>(.*?)<\/[^:]*:?NameID>/)
-            if (nameIdMatch) {
-                userEmail = nameIdMatch[1]
-                console.log('Found username via NameID:', userEmail)
-            }
-        }
-
-        // Strategy 3: Aggressive Fallback (Email-like string)
-        if (!userEmail) {
-            const contentMatch = decoded.match(/>([^<]+@[^<]+)</g)
-            if (contentMatch) {
-                const emailCandidates = contentMatch.map(s => s.substring(1, s.length - 1).trim())
-                const validEmail = emailCandidates.find(e =>
-                    e.includes('@') &&
-                    !e.includes('arn:aws:') &&
-                    !e.includes('role/') &&
-                    !e.includes('saml-provider/') &&
-                    !e.includes('http') &&
-                    e.length < 100
-                )
-                if (validEmail) {
-                    userEmail = validEmail
-                    console.log('Found username via aggressive fallback:', userEmail)
-                }
-            }
-        }
-
-        console.log('Extracted User Email:', userEmail)
-        return { roles, userEmail }
+        return { roles }
     } catch (e) {
         console.error('Error parsing SAML in background', e)
-        return { roles: [], userEmail: null }
+        return { roles: [] }
     }
+}
+
+
+// Setup alarm for auto-sync
+chrome.alarms.create('checkTokenExpiry', { periodInMinutes: 1 })
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === 'checkTokenExpiry') {
+        checkAndSyncToken()
+    }
+})
+
+function checkAndSyncToken() {
+    chrome.storage.sync.get(['autoSync', 'tokenExpiryMinutes', 'samlUrl'], (syncItems) => {
+        if (!syncItems.autoSync || !syncItems.samlUrl) {
+            return
+        }
+
+        chrome.storage.local.get(['lastUpdated', 'scrapingComplete'], (localItems) => {
+            // Don't sync if scraping is currently in progress
+            if (localItems.scrapingComplete === false) {
+                return
+            }
+
+            const lastUpdated = localItems.lastUpdated ? new Date(localItems.lastUpdated) : null
+            if (!lastUpdated) {
+                return
+            }
+
+            const now = new Date()
+            const diffMs = now - lastUpdated
+            const diffMins = Math.floor(diffMs / 60000)
+            const expiryMinutes = syncItems.tokenExpiryMinutes || 5
+
+            if (diffMins >= expiryMinutes) {
+                console.log(`Token expired (${diffMins} mins ago). Auto-syncing...`)
+
+                // Perform sync in a minimized window to be less intrusive
+                chrome.windows.create({
+                    url: syncItems.samlUrl,
+                    focused: false,
+                    width: 1,
+                    height: 1,
+                    left: 10000,
+                    top: 10000
+                }, (window) => {
+                    console.log('Auto-sync window created:', window?.id)
+                })
+            }
+        })
+    })
 }
