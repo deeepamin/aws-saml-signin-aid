@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import ReactDOM from 'react-dom/client'
 
 function Popup() {
@@ -8,6 +8,8 @@ function Popup() {
     const [loading, setLoading] = useState(false)
 
     const [favorites, setFavorites] = useState([])
+
+    const searchInputRef = useRef(null)
 
     useEffect(() => {
         // Load accounts and settings
@@ -41,12 +43,20 @@ function Popup() {
         return () => chrome.storage.onChanged.removeListener(handleStorageChange)
     }, [])
 
+    // Auto-focus search input when popup opens
+    useEffect(() => {
+        if (searchInputRef.current) {
+            searchInputRef.current.focus()
+        }
+    }, [])
+
     const handleSync = () => {
         if (!samlUrl) {
             chrome.runtime.openOptionsPage()
             return
         }
         setLoading(true)
+        setAccounts([]) // Clear accounts to show loading state
         chrome.tabs.create({ url: samlUrl }, (tab) => {
             // Tab opened
         })
@@ -142,6 +152,7 @@ function Popup() {
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
                     <input
+                        ref={searchInputRef}
                         type="text"
                         placeholder="Search"
                         value={searchQuery}
@@ -184,7 +195,25 @@ function Popup() {
 
             <hr style={{ border: 'none', borderBottom: '1px solid #999', margin: '8px 0 8px 0', width: '100%' }} />
             <div style={{ flex: 1, overflowY: 'auto' }}>
-                {filteredGroups.length === 0 ? (
+                {loading && accounts.length === 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '40px' }}>
+                        <div style={{
+                            border: '3px solid #f3f3f3',
+                            borderTop: '3px solid #2274A5',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            animation: 'spin 1s linear infinite'
+                        }}></div>
+                        <div style={{ marginTop: '16px', color: '#666', fontSize: '14px' }}>Loading accounts...</div>
+                        <style>{`
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                        `}</style>
+                    </div>
+                ) : filteredGroups.length === 0 ? (
                     <div style={{ color: '#666', textAlign: 'center', marginTop: '20px' }}>
                         {accounts.length === 0 ? 'No accounts found. Click Sync to load.' : 'No matches found.'}
                     </div>
