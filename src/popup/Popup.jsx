@@ -19,23 +19,63 @@ function Popup() {
             }
         })
 
-        chrome.storage.local.get(['availableRoles', 'favorites'], (items) => {
+        chrome.storage.local.get(['availableRoles', 'favorites', 'scrapingComplete'], (items) => {
+            console.log('Initial load - scrapingComplete:', items.scrapingComplete)
             if (items.availableRoles) {
                 setAccounts(items.availableRoles)
             }
             if (items.favorites) {
                 setFavorites(items.favorites)
             }
+            // Only turn off loading if scrapingComplete is explicitly true or undefined (not syncing)
+            // If it's false, we're in the middle of syncing
+            if (items.scrapingComplete === false) {
+                console.log('Scraping in progress, keeping loading state')
+                setLoading(true)
+            } else {
+                setLoading(false)
+            }
         })
 
         // Listen for storage changes to update the list in real-time
         const handleStorageChange = (changes, area) => {
             if (area === 'local') {
-                if (changes.availableRoles) {
-                    setAccounts(changes.availableRoles.newValue)
+                console.log('Storage changed:', changes)
+
+                // Only update accounts if scraping is complete
+                if (changes.availableRoles && changes.scrapingComplete?.newValue !== false) {
+                    // Check current scrapingComplete state
+                    chrome.storage.local.get(['scrapingComplete'], (items) => {
+                        console.log('Checking scrapingComplete before updating accounts:', items.scrapingComplete)
+                        if (items.scrapingComplete !== false) {
+                            setAccounts(changes.availableRoles.newValue)
+                        }
+                    })
                 }
                 if (changes.favorites) {
                     setFavorites(changes.favorites.newValue)
+                }
+                if (changes.scrapingComplete) {
+                    console.log('scrapingComplete changed to:', changes.scrapingComplete.newValue)
+                    // When scraping completes, turn off loading and update accounts
+                    if (changes.scrapingComplete.newValue === true) {
+                        console.log('Scraping complete! Turning off loading')
+                        // Clear the safety timeout
+                        if (window.syncTimeoutId) {
+                            clearTimeout(window.syncTimeoutId)
+                            window.syncTimeoutId = null
+                        }
+                        setLoading(false)
+                        // Now it's safe to show accounts
+                        chrome.storage.local.get(['availableRoles'], (items) => {
+                            if (items.availableRoles) {
+                                setAccounts(items.availableRoles)
+                            }
+                        })
+                    } else if (changes.scrapingComplete.newValue === false) {
+                        console.log('Scraping started, turning on loading')
+                        setLoading(true)
+                    }
                 }
             }
         }
@@ -57,8 +97,33 @@ function Popup() {
         }
         setLoading(true)
         setAccounts([]) // Clear accounts to show loading state
-        chrome.tabs.create({ url: samlUrl }, (tab) => {
-            // Tab opened
+
+        // Safety timeout - turn off loading after 30 seconds if something goes wrong
+        const timeoutId = setTimeout(() => {
+            console.warn('Sync timeout - turning off loading after 30 seconds')
+            setLoading(false)
+            // Load whatever accounts we have
+            chrome.storage.local.get(['availableRoles'], (items) => {
+                if (items.availableRoles) {
+                    setAccounts(items.availableRoles)
+                }
+            })
+        }, 30000)
+
+        // Store timeout ID so we can clear it when scraping completes
+        window.syncTimeoutId = timeoutId
+
+        // Check if background sync is enabled
+        chrome.storage.sync.get(['backgroundSync'], (items) => {
+            const useBackgroundSync = items.backgroundSync !== undefined ? items.backgroundSync : true
+
+            // Always create a tab, but control whether it's active
+            chrome.tabs.create({
+                url: samlUrl,
+                active: !useBackgroundSync // Background sync = inactive tab
+            }, (tab) => {
+                console.log('Sync tab created:', tab?.id, 'Active:', !useBackgroundSync)
+            })
         })
     }
 
@@ -225,12 +290,20 @@ function Popup() {
                                 <div key={group.accountId} style={{ marginBottom: '8px', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>
                                     <div style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                         <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                                            <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
-                                                {group.accountName || 'Unknown Account'}
-                                            </span>
-                                            <span style={{ color: '#888', fontSize: '12px', marginLeft: '8px', fontWeight: 'bold' }}>
-                                                ({group.accountId})
-                                            </span>
+                                            {group.accountName && group.accountName !== 'Unknown Account' ? (
+                                                <>
+                                                    <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
+                                                        {group.accountName}
+                                                    </span>
+                                                    <span style={{ color: '#888', fontSize: '12px', marginLeft: '8px', fontWeight: 'bold' }}>
+                                                        ({group.accountId})
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
+                                                    {group.accountId}
+                                                </span>
+                                            )}
                                         </div>
                                         <button
                                             onClick={() => handleToggleFavorite(group.accountId)}

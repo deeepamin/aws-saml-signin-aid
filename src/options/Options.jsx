@@ -3,19 +3,25 @@ import ReactDOM from 'react-dom/client'
 
 function Options() {
     const [url, setUrl] = useState('')
+    const [backgroundSync, setBackgroundSync] = useState(true) // Default to true
     const [status, setStatus] = useState('')
 
     useEffect(() => {
         // Restore options from chrome.storage
-        chrome.storage.sync.get(['samlUrl'], (items) => {
+        chrome.storage.sync.get(['samlUrl', 'backgroundSync'], (items) => {
             if (items.samlUrl) {
                 setUrl(items.samlUrl)
             }
+            // Default to true if not set
+            setBackgroundSync(items.backgroundSync !== undefined ? items.backgroundSync : true)
         })
     }, [])
 
     const saveOptions = () => {
-        chrome.storage.sync.set({ samlUrl: url }, () => {
+        chrome.storage.sync.set({
+            samlUrl: url,
+            backgroundSync: backgroundSync
+        }, () => {
             setStatus('Options saved.')
             setTimeout(() => {
                 setStatus('')
@@ -37,6 +43,20 @@ function Options() {
                     style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
                     placeholder="https://example.com/saml"
                 />
+            </div>
+            <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                        type="checkbox"
+                        checked={backgroundSync}
+                        onChange={(e) => setBackgroundSync(e.target.checked)}
+                        style={{ marginRight: '8px', cursor: 'pointer' }}
+                    />
+                    <span>Sync in background (recommended)</span>
+                </label>
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', marginLeft: '24px' }}>
+                    When enabled, the SAML URL opens in a background tab without focus. When disabled, tab with SAML URL will be focused.
+                </div>
             </div>
             <button
                 onClick={saveOptions}

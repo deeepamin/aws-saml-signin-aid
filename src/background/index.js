@@ -50,7 +50,8 @@ chrome.webRequest.onBeforeRequest.addListener(
                     availableRoles: roles,
                     userEmail: userEmail,
                     lastUpdated: new Date().toISOString(),
-                    pendingAuthTabId: details.tabId // Store tab ID for scraping
+                    pendingAuthTabId: details.tabId, // Store tab ID for scraping
+                    scrapingComplete: false // Mark that we're waiting for account names
                 }, () => {
                     console.log('SAML Roles and Email saved to storage. Waiting for page load to scrape names...')
                 })
@@ -200,7 +201,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
             chrome.storage.local.set({
                 availableRoles: updatedRoles,
-                pendingAuthTabId: null // Clear pending tab
+                pendingAuthTabId: null, // Clear pending tab
+                scrapingComplete: true // Mark scraping as complete
             }, () => {
                 console.log('Roles updated with account names')
                 // Now close the tab
