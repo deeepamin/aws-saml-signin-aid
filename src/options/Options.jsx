@@ -9,6 +9,8 @@ function Options() {
     const [accountNameRegex, setAccountNameRegex] = useState('')
     const [roleNameRegex, setRoleNameRegex] = useState('')
     const [darkMode, setDarkMode] = useState(false)
+    const [multiSession, setMultiSession] = useState(false) // Default to false
+    const [enableSignOutAll, setEnableSignOutAll] = useState(false) // Default to false
     const [status, setStatus] = useState('')
 
     useEffect(() => {
@@ -20,7 +22,9 @@ function Options() {
             'autoSync',
             'accountNameRegex',
             'roleNameRegex',
-            'darkMode'
+            'darkMode',
+            'multiSession',
+            'enableSignOutAll'
         ], (items) => {
             if (items.samlUrl) {
                 setUrl(items.samlUrl)
@@ -35,6 +39,8 @@ function Options() {
             if (items.accountNameRegex) setAccountNameRegex(items.accountNameRegex)
             if (items.roleNameRegex) setRoleNameRegex(items.roleNameRegex)
             if (items.darkMode !== undefined) setDarkMode(items.darkMode)
+            if (items.multiSession !== undefined) setMultiSession(items.multiSession)
+            if (items.enableSignOutAll !== undefined) setEnableSignOutAll(items.enableSignOutAll)
         })
     }, [])
 
@@ -46,7 +52,9 @@ function Options() {
             tokenExpiryMinutes: parseInt(tokenExpiryMinutes),
             accountNameRegex: accountNameRegex,
             roleNameRegex: roleNameRegex,
-            darkMode: darkMode
+            darkMode: darkMode,
+            multiSession: multiSession,
+            enableSignOutAll: enableSignOutAll
         }, () => {
             setStatus('Options saved.')
             setTimeout(() => {
@@ -87,90 +95,26 @@ function Options() {
                 maxWidth: '800px',
                 padding: '24px'
             }}>
-                {/* Sign-In Options Section */}
-                <div style={{ marginBottom: '32px' }}>
-                    <h2 style={{ fontSize: '16px', fontWeight: '600', color: theme.text, marginBottom: '16px', borderBottom: `1px solid ${theme.border}`, paddingBottom: '8px' }}>
-                        Sign-In Options
-                    </h2>
 
-                    <div style={{ marginBottom: '24px' }}>
-                        <label style={{
-                            display: 'block',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            marginBottom: '8px',
-                            color: theme.text
-                        }}>
-                            AWS SAML Sign-In URL
-                        </label>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <input
-                                type="text"
-                                value={url}
-                                onChange={(e) => setUrl(e.target.value)}
-                                style={{
-                                    flex: 1,
-                                    padding: '8px 12px',
-                                    borderRadius: '6px',
-                                    border: `1px solid ${theme.inputBorder}`,
-                                    backgroundColor: theme.inputBg,
-                                    color: theme.text,
-                                    fontSize: '14px',
-                                    boxSizing: 'border-box',
-                                    outline: 'none',
-                                    transition: 'border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out'
-                                }}
-                                onFocus={(e) => e.target.style.borderColor = '#2274A5'}
-                                onBlur={(e) => e.target.style.borderColor = theme.inputBorder}
-                                placeholder="https://example.com/saml"
-                            />
-                            <button
-                                onClick={() => {
-                                    if (url) {
-                                        chrome.tabs.create({ url: url, active: true })
-                                    }
-                                }}
-                                style={{
-                                    padding: '8px 16px',
-                                    backgroundColor: theme.buttonBg,
-                                    color: theme.text,
-                                    border: `1px solid ${theme.inputBorder}`,
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '500',
-                                    whiteSpace: 'nowrap',
-                                    transition: 'background-color 0.2s'
-                                }}
-                                onMouseOver={(e) => e.target.style.backgroundColor = theme.buttonHover}
-                                onMouseOut={(e) => e.target.style.backgroundColor = theme.buttonBg}
-                                title="Open URL to authenticate"
-                            >
-                                Authenticate
-                            </button>
-                        </div>
-                        <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
-                            URL used for signing in to AWS console via SAML provider (e.g., Azure AD) which issues the SAML token.
-                        </div>
-                    </div>
 
-                    <div style={{ marginBottom: '24px' }}>
-                        <label style={{
-                            display: 'block',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            marginBottom: '8px',
-                            color: theme.text
-                        }}>
-                            Token Expiry Warning (minutes)
-                        </label>
+                {/* URL Section (No Header) */}
+                <div style={{ marginBottom: '24px' }}>
+                    <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        marginBottom: '8px',
+                        color: theme.text
+                    }}>
+                        AWS SAML Sign-In URL
+                    </label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
                         <input
-                            type="number"
-                            min="1"
-                            value={tokenExpiryMinutes}
-                            onChange={(e) => setTokenExpiryMinutes(e.target.value)}
+                            type="text"
+                            value={url}
+                            onChange={(e) => setUrl(e.target.value)}
                             style={{
-                                width: '100%',
+                                flex: 1,
                                 padding: '8px 12px',
                                 borderRadius: '6px',
                                 border: `1px solid ${theme.inputBorder}`,
@@ -178,58 +122,40 @@ function Options() {
                                 color: theme.text,
                                 fontSize: '14px',
                                 boxSizing: 'border-box',
-                                outline: 'none'
+                                outline: 'none',
+                                transition: 'border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out'
                             }}
                             onFocus={(e) => e.target.style.borderColor = '#2274A5'}
                             onBlur={(e) => e.target.style.borderColor = theme.inputBorder}
+                            placeholder="https://example.com/saml"
                         />
-                        <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
-                            Show expired warning after this many minutes (default: 5).
-                        </div>
+                        <button
+                            onClick={() => {
+                                if (url) {
+                                    chrome.tabs.create({ url: url, active: true })
+                                }
+                            }}
+                            style={{
+                                padding: '8px 16px',
+                                backgroundColor: theme.buttonBg,
+                                color: theme.text,
+                                border: `1px solid ${theme.inputBorder}`,
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                whiteSpace: 'nowrap',
+                                transition: 'background-color 0.2s'
+                            }}
+                            onMouseOver={(e) => e.target.style.backgroundColor = theme.buttonHover}
+                            onMouseOut={(e) => e.target.style.backgroundColor = theme.buttonBg}
+                            title="Open URL to authenticate"
+                        >
+                            Authenticate
+                        </button>
                     </div>
-
-                    <div style={{ marginBottom: '24px' }}>
-                        <label style={{ display: 'flex', alignItems: 'flex-start', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={autoSync}
-                                onChange={(e) => setAutoSync(e.target.checked)}
-                                style={{
-                                    marginTop: '3px',
-                                    marginRight: '10px',
-                                    cursor: 'pointer',
-                                    accentColor: '#2274A5'
-                                }}
-                            />
-                            <div>
-                                <span style={{ fontSize: '14px', fontWeight: '500', color: theme.text }}>Auto-sync on expiry</span>
-                                <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '4px' }}>
-                                    Automatically refresh the token when it expires. Opens a new invisible window in background and closes it after getting the token.
-                                </div>
-                            </div>
-                        </label>
-                    </div>
-
-                    <div style={{ marginBottom: '24px' }}>
-                        <label style={{ display: 'flex', alignItems: 'flex-start', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={backgroundSync}
-                                onChange={(e) => setBackgroundSync(e.target.checked)}
-                                style={{
-                                    marginTop: '3px',
-                                    marginRight: '10px',
-                                    cursor: 'pointer',
-                                    accentColor: '#2274A5'
-                                }}
-                            />
-                            <div>
-                                <span style={{ fontSize: '14px', fontWeight: '500', color: theme.text }}>Sync in background</span>
-                                <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '4px' }}>
-                                    When enabled, the SAML URL opens in a background tab without focus. When disabled, tab with SAML URL will be focused.
-                                </div>
-                            </div>
-                        </label>
+                    <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
+                        URL used for signing in to AWS console via SAML provider (e.g., Azure AD) which issues the SAML token.
                     </div>
                 </div>
 
@@ -281,6 +207,40 @@ function Options() {
                         </div>
                         <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
                             Choose the appearance of the extension popup and options page.
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <label style={{
+                            display: 'block',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            marginBottom: '8px',
+                            color: theme.text
+                        }}>
+                            Token Expiry Warning (minutes)
+                        </label>
+                        <input
+                            type="number"
+                            min="1"
+                            value={tokenExpiryMinutes}
+                            onChange={(e) => setTokenExpiryMinutes(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                borderRadius: '6px',
+                                border: `1px solid ${theme.inputBorder}`,
+                                backgroundColor: theme.inputBg,
+                                color: theme.text,
+                                fontSize: '14px',
+                                boxSizing: 'border-box',
+                                outline: 'none'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = '#2274A5'}
+                            onBlur={(e) => e.target.style.borderColor = theme.inputBorder}
+                        />
+                        <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
+                            Show expired warning after this many minutes (default: 5).
                         </div>
                     </div>
 
@@ -350,6 +310,107 @@ function Options() {
                         <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
                             Regular expression to remove repetitive text from role names. Matches will be replaced with an empty string.
                         </div>
+                    </div>
+                </div>
+
+                {/* Advanced Options Section */}
+                <div style={{ marginBottom: '32px' }}>
+                    <h2 style={{ fontSize: '16px', fontWeight: '600', color: theme.text, marginBottom: '16px', borderBottom: `1px solid ${theme.border}`, paddingBottom: '8px' }}>
+                        Advanced Options
+                    </h2>
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <label style={{ display: 'flex', alignItems: 'flex-start', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={autoSync}
+                                onChange={(e) => setAutoSync(e.target.checked)}
+                                style={{
+                                    marginTop: '3px',
+                                    marginRight: '10px',
+                                    cursor: 'pointer',
+                                    accentColor: '#2274A5'
+                                }}
+                            />
+                            <div>
+                                <span style={{ fontSize: '14px', fontWeight: '500', color: theme.text }}>Auto-sync on expiry</span>
+                                <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '4px' }}>
+                                    Automatically refresh the token when it expires. Opens a new invisible window in background and closes it after getting the token.
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <label style={{ display: 'flex', alignItems: 'flex-start', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={backgroundSync}
+                                onChange={(e) => setBackgroundSync(e.target.checked)}
+                                style={{
+                                    marginTop: '3px',
+                                    marginRight: '10px',
+                                    cursor: 'pointer',
+                                    accentColor: '#2274A5'
+                                }}
+                            />
+                            <div>
+                                <span style={{ fontSize: '14px', fontWeight: '500', color: theme.text }}>Sync in background</span>
+                                <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '4px' }}>
+                                    When enabled, the SAML URL opens in a background tab without focus. When disabled, tab with SAML URL will be focused.
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <label style={{ display: 'flex', alignItems: 'flex-start', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={multiSession}
+                                onChange={(e) => {
+                                    setMultiSession(e.target.checked)
+                                    if (!e.target.checked) {
+                                        setEnableSignOutAll(false)
+                                    }
+                                }}
+                                style={{
+                                    marginTop: '3px',
+                                    marginRight: '10px',
+                                    cursor: 'pointer',
+                                    accentColor: '#2274A5'
+                                }}
+                            />
+                            <div>
+                                <span style={{ fontSize: '14px', fontWeight: '500', color: theme.text }}>Multi-Session Support</span>
+                                <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '4px' }}>
+                                    Enable if you use multiple-session support in your AWS console. If disabled, forces a sign out before signing in to a new role.
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div style={{ marginBottom: '24px', marginLeft: '24px' }}>
+                        <label style={{ display: 'flex', alignItems: 'flex-start', cursor: multiSession ? 'pointer' : 'not-allowed', opacity: multiSession ? 1 : 0.5 }}>
+                            <input
+                                type="checkbox"
+                                checked={enableSignOutAll}
+                                onChange={(e) => setEnableSignOutAll(e.target.checked)}
+                                disabled={!multiSession}
+                                style={{
+                                    marginTop: '3px',
+                                    marginRight: '10px',
+                                    cursor: multiSession ? 'pointer' : 'not-allowed',
+                                    accentColor: '#2274A5'
+                                }}
+                            />
+                            <div>
+                                <span style={{ fontSize: '14px', fontWeight: '500', color: theme.text }}>Enable Sign Out of all sessions (Experimental)</span>
+                                <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '4px' }}>
+                                    Adds a button to the popup to sign out of all active AWS sessions by clearing cookies.
+                                </div>
+                            </div>
+                        </label>
                     </div>
                 </div>
 

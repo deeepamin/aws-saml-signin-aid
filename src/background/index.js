@@ -282,9 +282,37 @@ async function handleLogin(role, sendResponse) {
         // 3. Generate Login URL
         const loginUrl = `https://signin.aws.amazon.com/federation?Action=login&Issuer=aws-saml-signin-aid&Destination=${encodeURIComponent('https://console.aws.amazon.com/')}&SigninToken=${encodeURIComponent(fedJson.SigninToken)}`
 
-        // 4. Open in new tab
-        chrome.tabs.create({ url: loginUrl })
-        sendResponse({ success: true })
+        // 4. Check Multi-Session setting
+        const { multiSession } = await chrome.storage.sync.get('multiSession')
+
+        if (multiSession) {
+            // Multi-session enabled: Just open a new tab
+            chrome.tabs.create({ url: loginUrl })
+            sendResponse({ success: true })
+        } else {
+            // Single-session: Logout first by clearing cookies
+            console.log('Single session mode: Clearing cookies to logout...')
+
+            chrome.cookies.getAll({ domain: 'aws.amazon.com' }, (cookies) => {
+                const promises = cookies.map((cookie) => {
+                    const domain = cookie.domain.replace(/^\./, '')
+                    const url = `https://${domain}${cookie.path}`
+                    return chrome.cookies.remove({
+                        url: url,
+                        name: cookie.name,
+                        storeId: cookie.storeId
+                    })
+                })
+
+                // Wait for all cookies to be removed
+                Promise.all(promises).then(() => {
+                    console.log('Cookies cleared, proceeding to login...')
+                    // Now open the login URL
+                    chrome.tabs.create({ url: loginUrl })
+                    sendResponse({ success: true })
+                })
+            })
+        }
 
     } catch (e) {
         console.error('Login failed', e)

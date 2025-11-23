@@ -20,10 +20,12 @@ function Popup() {
     const [refreshingToken, setRefreshingToken] = useState(false) // Track if token is being refreshed
 
     const [darkMode, setDarkMode] = useState(false)
+    const [multiSession, setMultiSession] = useState(false)
+    const [enableSignOutAll, setEnableSignOutAll] = useState(false)
 
     useEffect(() => {
         // Load accounts and settings
-        chrome.storage.sync.get(['samlUrl', 'tokenExpiryMinutes', 'autoSync', 'accountNameRegex', 'roleNameRegex', 'darkMode'], (items) => {
+        chrome.storage.sync.get(['samlUrl', 'tokenExpiryMinutes', 'autoSync', 'accountNameRegex', 'roleNameRegex', 'darkMode', 'multiSession', 'enableSignOutAll'], (items) => {
             if (items.samlUrl) {
                 setSamlUrl(items.samlUrl)
             }
@@ -41,6 +43,12 @@ function Popup() {
             }
             if (items.darkMode !== undefined) {
                 setDarkMode(items.darkMode)
+            }
+            if (items.multiSession !== undefined) {
+                setMultiSession(items.multiSession)
+            }
+            if (items.enableSignOutAll !== undefined) {
+                setEnableSignOutAll(items.enableSignOutAll)
             }
         })
 
@@ -70,6 +78,12 @@ function Popup() {
             if (area === 'sync') {
                 if (changes.darkMode) {
                     setDarkMode(changes.darkMode.newValue)
+                }
+                if (changes.multiSession) {
+                    setMultiSession(changes.multiSession.newValue)
+                }
+                if (changes.enableSignOutAll) {
+                    setEnableSignOutAll(changes.enableSignOutAll.newValue)
                 }
             }
             if (area === 'local') {
@@ -162,6 +176,32 @@ function Popup() {
                 active: !useBackgroundSync // Background sync = inactive tab
             }, (tab) => {
                 console.log('Sync tab created:', tab?.id, 'Active:', !useBackgroundSync)
+            })
+        })
+    }
+
+    const handleSignOut = () => {
+        // Sign out of all accounts by clearing cookies
+        chrome.cookies.getAll({ domain: 'aws.amazon.com' }, (cookies) => {
+            const promises = cookies.map((cookie) => {
+                // Construct a valid URL for the cookie
+                const domain = cookie.domain.replace(/^\./, '')
+                const url = `https://${domain}${cookie.path}`
+                return chrome.cookies.remove({
+                    url: url,
+                    name: cookie.name,
+                    storeId: cookie.storeId
+                })
+            })
+
+            Promise.all(promises).then(() => {
+                console.log('Cleared AWS cookies')
+                // Reload all AWS console tabs to reflect logout
+                chrome.tabs.query({ url: '*://*.aws.amazon.com/*' }, (tabs) => {
+                    tabs.forEach(tab => {
+                        chrome.tabs.reload(tab.id)
+                    })
+                })
             })
         })
     }
@@ -354,6 +394,33 @@ function Popup() {
     return (
         <div style={{ padding: '16px', minHeight: '300px', display: 'flex', flexDirection: 'column', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', backgroundColor: theme.bg, color: theme.text }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '8px' }}>
+                {multiSession && enableSignOutAll && (
+                    <button
+                        onClick={handleSignOut}
+                        title="Sign Out of all sessions"
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        style={{
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            padding: '6px',
+                            color: '#2274A5',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'background-color 0.2s',
+                            outline: 'none'
+                        }}
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                    </button>
+                )}
                 <div style={{ position: 'relative', flex: 1 }}>
                     <svg
                         width="12"
@@ -399,16 +466,21 @@ function Popup() {
                     onClick={handleSync}
                     disabled={loading}
                     title="Sync Accounts"
+                    onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)')}
+                    onMouseLeave={(e) => !loading && (e.currentTarget.style.backgroundColor = 'transparent')}
                     style={{
-                        background: 'none',
+                        backgroundColor: 'transparent',
                         border: 'none',
-                        cursor: 'pointer',
-                        padding: '4px',
+                        borderRadius: '4px',
+                        cursor: loading ? 'default' : 'pointer',
+                        padding: '6px',
                         color: '#2274A5',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        opacity: loading ? 0.5 : 1
+                        opacity: loading ? 0.5 : 1,
+                        transition: 'background-color 0.2s',
+                        outline: 'none'
                     }}
                 >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -420,15 +492,20 @@ function Popup() {
                 <button
                     onClick={() => chrome.runtime.openOptionsPage()}
                     title="Options"
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     style={{
-                        background: 'none',
+                        backgroundColor: 'transparent',
                         border: 'none',
+                        borderRadius: '4px',
                         cursor: 'pointer',
-                        padding: '4px',
+                        padding: '6px',
                         color: '#2274A5',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
+                        justifyContent: 'center',
+                        transition: 'background-color 0.2s',
+                        outline: 'none'
                     }}
                 >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
