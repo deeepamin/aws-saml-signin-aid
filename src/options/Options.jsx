@@ -8,6 +8,7 @@ function Options() {
     const [tokenExpiryMinutes, setTokenExpiryMinutes] = useState(5) // Default to 5
     const [accountNameRegex, setAccountNameRegex] = useState('')
     const [roleNameRegex, setRoleNameRegex] = useState('')
+    const [darkMode, setDarkMode] = useState(false)
     const [status, setStatus] = useState('')
 
     useEffect(() => {
@@ -18,7 +19,8 @@ function Options() {
             'tokenExpiryMinutes',
             'autoSync',
             'accountNameRegex',
-            'roleNameRegex'
+            'roleNameRegex',
+            'darkMode'
         ], (items) => {
             if (items.samlUrl) {
                 setUrl(items.samlUrl)
@@ -32,6 +34,7 @@ function Options() {
 
             if (items.accountNameRegex) setAccountNameRegex(items.accountNameRegex)
             if (items.roleNameRegex) setRoleNameRegex(items.roleNameRegex)
+            if (items.darkMode !== undefined) setDarkMode(items.darkMode)
         })
     }, [])
 
@@ -42,7 +45,8 @@ function Options() {
             autoSync: autoSync,
             tokenExpiryMinutes: parseInt(tokenExpiryMinutes),
             accountNameRegex: accountNameRegex,
-            roleNameRegex: roleNameRegex
+            roleNameRegex: roleNameRegex,
+            darkMode: darkMode
         }, () => {
             setStatus('Options saved.')
             setTimeout(() => {
@@ -51,26 +55,41 @@ function Options() {
         })
     }
 
+    const theme = {
+        bg: darkMode ? '#1f2937' : '#f3f4f6', // gray-800 : gray-100
+        cardBg: darkMode ? '#111827' : 'white', // gray-900 : white
+        text: darkMode ? '#f9fafb' : '#333', // gray-50
+        textSecondary: darkMode ? '#9ca3af' : '#6b7280', // gray-400 : gray-500
+        border: darkMode ? '#374151' : '#e5e7eb', // gray-700 : gray-200
+        inputBg: darkMode ? '#374151' : 'white', // gray-700 : white
+        inputBorder: darkMode ? '#4b5563' : '#d1d5db', // gray-600 : gray-300
+        buttonBg: darkMode ? '#374151' : '#f3f4f6', // gray-700 : gray-100
+        buttonHover: darkMode ? '#4b5563' : '#e5e7eb', // gray-600 : gray-200
+    }
+
     return (
         <div style={{
             display: 'flex',
             justifyContent: 'center',
             padding: '40px 20px',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-            color: '#333'
+            color: theme.text,
+            backgroundColor: theme.bg,
+            minHeight: '100vh',
+            boxSizing: 'border-box'
         }}>
             <div style={{
-                backgroundColor: 'white',
+                backgroundColor: theme.cardBg,
                 borderRadius: '8px',
                 boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-                border: '1px solid #e5e7eb',
+                border: `1px solid ${theme.border}`,
                 width: '100%',
                 maxWidth: '800px',
                 padding: '24px'
             }}>
                 {/* Sign-In Options Section */}
                 <div style={{ marginBottom: '32px' }}>
-                    <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#374151', marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>
+                    <h2 style={{ fontSize: '16px', fontWeight: '600', color: theme.text, marginBottom: '16px', borderBottom: `1px solid ${theme.border}`, paddingBottom: '8px' }}>
                         Sign-In Options
                     </h2>
 
@@ -80,7 +99,7 @@ function Options() {
                             fontSize: '14px',
                             fontWeight: '500',
                             marginBottom: '8px',
-                            color: '#374151'
+                            color: theme.text
                         }}>
                             AWS SAML Sign-In URL
                         </label>
@@ -93,14 +112,16 @@ function Options() {
                                     flex: 1,
                                     padding: '8px 12px',
                                     borderRadius: '6px',
-                                    border: '1px solid #d1d5db',
+                                    border: `1px solid ${theme.inputBorder}`,
+                                    backgroundColor: theme.inputBg,
+                                    color: theme.text,
                                     fontSize: '14px',
                                     boxSizing: 'border-box',
                                     outline: 'none',
                                     transition: 'border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out'
                                 }}
                                 onFocus={(e) => e.target.style.borderColor = '#2274A5'}
-                                onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                                onBlur={(e) => e.target.style.borderColor = theme.inputBorder}
                                 placeholder="https://example.com/saml"
                             />
                             <button
@@ -111,9 +132,9 @@ function Options() {
                                 }}
                                 style={{
                                     padding: '8px 16px',
-                                    backgroundColor: '#f3f4f6',
-                                    color: '#374151',
-                                    border: '1px solid #d1d5db',
+                                    backgroundColor: theme.buttonBg,
+                                    color: theme.text,
+                                    border: `1px solid ${theme.inputBorder}`,
                                     borderRadius: '6px',
                                     cursor: 'pointer',
                                     fontSize: '14px',
@@ -121,14 +142,14 @@ function Options() {
                                     whiteSpace: 'nowrap',
                                     transition: 'background-color 0.2s'
                                 }}
-                                onMouseOver={(e) => e.target.style.backgroundColor = '#e5e7eb'}
-                                onMouseOut={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                                onMouseOver={(e) => e.target.style.backgroundColor = theme.buttonHover}
+                                onMouseOut={(e) => e.target.style.backgroundColor = theme.buttonBg}
                                 title="Open URL to authenticate"
                             >
                                 Authenticate
                             </button>
                         </div>
-                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
+                        <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
                             URL used for signing in to AWS console via SAML provider (e.g., Azure AD) which issues the SAML token.
                         </div>
                     </div>
@@ -139,7 +160,7 @@ function Options() {
                             fontSize: '14px',
                             fontWeight: '500',
                             marginBottom: '8px',
-                            color: '#374151'
+                            color: theme.text
                         }}>
                             Token Expiry Warning (minutes)
                         </label>
@@ -152,15 +173,17 @@ function Options() {
                                 width: '100%',
                                 padding: '8px 12px',
                                 borderRadius: '6px',
-                                border: '1px solid #d1d5db',
+                                border: `1px solid ${theme.inputBorder}`,
+                                backgroundColor: theme.inputBg,
+                                color: theme.text,
                                 fontSize: '14px',
                                 boxSizing: 'border-box',
                                 outline: 'none'
                             }}
                             onFocus={(e) => e.target.style.borderColor = '#2274A5'}
-                            onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                            onBlur={(e) => e.target.style.borderColor = theme.inputBorder}
                         />
-                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
+                        <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
                             Show expired warning after this many minutes (default: 5).
                         </div>
                     </div>
@@ -179,8 +202,8 @@ function Options() {
                                 }}
                             />
                             <div>
-                                <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Auto-sync on expiry</span>
-                                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                                <span style={{ fontSize: '14px', fontWeight: '500', color: theme.text }}>Auto-sync on expiry</span>
+                                <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '4px' }}>
                                     Automatically refresh the token when it expires. Opens a new invisible window in background and closes it after getting the token.
                                 </div>
                             </div>
@@ -201,8 +224,8 @@ function Options() {
                                 }}
                             />
                             <div>
-                                <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Sync in background</span>
-                                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                                <span style={{ fontSize: '14px', fontWeight: '500', color: theme.text }}>Sync in background</span>
+                                <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '4px' }}>
                                     When enabled, the SAML URL opens in a background tab without focus. When disabled, tab with SAML URL will be focused.
                                 </div>
                             </div>
@@ -212,7 +235,7 @@ function Options() {
 
                 {/* Display Options Section */}
                 <div style={{ marginBottom: '32px' }}>
-                    <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#374151', marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>
+                    <h2 style={{ fontSize: '16px', fontWeight: '600', color: theme.text, marginBottom: '16px', borderBottom: `1px solid ${theme.border}`, paddingBottom: '8px' }}>
                         Display Options
                     </h2>
 
@@ -222,7 +245,52 @@ function Options() {
                             fontSize: '14px',
                             fontWeight: '500',
                             marginBottom: '8px',
-                            color: '#374151'
+                            color: theme.text
+                        }}>
+                            Theme
+                        </label>
+                        <div style={{ display: 'flex', gap: '20px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="theme"
+                                    checked={!darkMode}
+                                    onChange={() => setDarkMode(false)}
+                                    style={{
+                                        marginRight: '8px',
+                                        cursor: 'pointer',
+                                        accentColor: '#2274A5'
+                                    }}
+                                />
+                                <span style={{ fontSize: '14px', color: theme.text }}>Light</span>
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="theme"
+                                    checked={darkMode}
+                                    onChange={() => setDarkMode(true)}
+                                    style={{
+                                        marginRight: '8px',
+                                        cursor: 'pointer',
+                                        accentColor: '#2274A5'
+                                    }}
+                                />
+                                <span style={{ fontSize: '14px', color: theme.text }}>Dark</span>
+                            </label>
+                        </div>
+                        <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
+                            Choose the appearance of the extension popup and options page.
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <label style={{
+                            display: 'block',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            marginBottom: '8px',
+                            color: theme.text
                         }}>
                             Clean Account Names (Regex)
                         </label>
@@ -235,15 +303,17 @@ function Options() {
                                 width: '100%',
                                 padding: '8px 12px',
                                 borderRadius: '6px',
-                                border: '1px solid #d1d5db',
+                                border: `1px solid ${theme.inputBorder}`,
+                                backgroundColor: theme.inputBg,
+                                color: theme.text,
                                 fontSize: '14px',
                                 boxSizing: 'border-box',
                                 outline: 'none'
                             }}
                             onFocus={(e) => e.target.style.borderColor = '#2274A5'}
-                            onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                            onBlur={(e) => e.target.style.borderColor = theme.inputBorder}
                         />
-                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
+                        <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
                             Regular expression to remove repetitive text from account names. Matches will be replaced with an empty string.
                         </div>
                     </div>
@@ -254,7 +324,7 @@ function Options() {
                             fontSize: '14px',
                             fontWeight: '500',
                             marginBottom: '8px',
-                            color: '#374151'
+                            color: theme.text
                         }}>
                             Clean Role Names (Regex)
                         </label>
@@ -267,15 +337,17 @@ function Options() {
                                 width: '100%',
                                 padding: '8px 12px',
                                 borderRadius: '6px',
-                                border: '1px solid #d1d5db',
+                                border: `1px solid ${theme.inputBorder}`,
+                                backgroundColor: theme.inputBg,
+                                color: theme.text,
                                 fontSize: '14px',
                                 boxSizing: 'border-box',
                                 outline: 'none'
                             }}
                             onFocus={(e) => e.target.style.borderColor = '#2274A5'}
-                            onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                            onBlur={(e) => e.target.style.borderColor = theme.inputBorder}
                         />
-                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
+                        <div style={{ fontSize: '12px', color: theme.textSecondary, marginTop: '6px' }}>
                             Regular expression to remove repetitive text from role names. Matches will be replaced with an empty string.
                         </div>
                     </div>

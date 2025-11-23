@@ -19,9 +19,11 @@ function Popup() {
     const [loadingRole, setLoadingRole] = useState(null) // Track which role is being loaded
     const [refreshingToken, setRefreshingToken] = useState(false) // Track if token is being refreshed
 
+    const [darkMode, setDarkMode] = useState(false)
+
     useEffect(() => {
         // Load accounts and settings
-        chrome.storage.sync.get(['samlUrl', 'tokenExpiryMinutes', 'autoSync', 'accountNameRegex', 'roleNameRegex'], (items) => {
+        chrome.storage.sync.get(['samlUrl', 'tokenExpiryMinutes', 'autoSync', 'accountNameRegex', 'roleNameRegex', 'darkMode'], (items) => {
             if (items.samlUrl) {
                 setSamlUrl(items.samlUrl)
             }
@@ -36,6 +38,9 @@ function Popup() {
             }
             if (items.roleNameRegex) {
                 setRoleNameRegex(items.roleNameRegex)
+            }
+            if (items.darkMode !== undefined) {
+                setDarkMode(items.darkMode)
             }
         })
 
@@ -62,6 +67,11 @@ function Popup() {
 
         // Listen for storage changes to update the list in real-time
         const handleStorageChange = (changes, area) => {
+            if (area === 'sync') {
+                if (changes.darkMode) {
+                    setDarkMode(changes.darkMode.newValue)
+                }
+            }
             if (area === 'local') {
                 console.log('Storage changed:', changes)
 
@@ -327,8 +337,22 @@ function Popup() {
         return group.roles.some(role => role.roleName.toLowerCase().includes(query))
     })
 
+    const theme = {
+        bg: darkMode ? '#1f2937' : 'white',
+        text: darkMode ? '#f9fafb' : '#333',
+        textSecondary: darkMode ? '#9ca3af' : '#666',
+        border: darkMode ? '#374151' : '#eee',
+        inputBg: darkMode ? '#374151' : 'white',
+        inputBorder: darkMode ? '#4b5563' : '#ccc',
+        iconColor: darkMode ? '#9ca3af' : '#999',
+        buttonHover: darkMode ? '#4b5563' : '#e0e0e0',
+        buttonBg: darkMode ? '#374151' : '#f5f5f5',
+        buttonDisabled: darkMode ? '#4b5563' : '#e0e0e0',
+        roleText: darkMode ? '#e5e7eb' : '#333',
+    }
+
     return (
-        <div style={{ padding: '16px', minHeight: '300px', display: 'flex', flexDirection: 'column', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
+        <div style={{ padding: '16px', minHeight: '300px', display: 'flex', flexDirection: 'column', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', backgroundColor: theme.bg, color: theme.text }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '8px' }}>
                 <div style={{ position: 'relative', flex: 1 }}>
                     <svg
@@ -336,7 +360,7 @@ function Popup() {
                         height="12"
                         viewBox="0 0 24 24"
                         fill="none"
-                        stroke="#999"
+                        stroke={theme.iconColor}
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -360,11 +384,14 @@ function Popup() {
                         style={{
                             padding: '6px 8px 6px 24px',
                             borderRadius: '4px',
-                            border: '1px solid #ccc',
+                            border: `1px solid ${theme.inputBorder}`,
+                            backgroundColor: theme.inputBg,
+                            color: theme.text,
                             width: '100%',
                             fontSize: '13px',
                             boxSizing: 'border-box',
-                            textAlign: 'left'
+                            textAlign: 'left',
+                            outline: 'none'
                         }}
                     />
                 </div>
@@ -393,20 +420,27 @@ function Popup() {
             </div>
 
 
-            <hr style={{ border: 'none', borderBottom: '1px solid #999', margin: '8px 0 8px 0', width: '100%' }} />
+            <hr style={{ border: 'none', borderBottom: `1px solid ${theme.iconColor}`, margin: '8px 0 8px 0', width: '100%' }} />
 
             {/* Token expiry warning */}
             {tokenExpired && accounts.length > 0 && (
                 <div style={{
                     padding: '8px 12px',
-                    backgroundColor: '#ffebee',
-                    border: '1px solid #ef5350',
+                    backgroundColor: darkMode ? '#7f1d1d' : '#ffebee',
+                    border: `1px solid ${darkMode ? '#991b1b' : '#ef5350'}`,
                     borderRadius: '4px',
                     margin: '0 0 8px 0',
                     fontSize: '12px',
-                    color: '#c62828'
+                    color: darkMode ? '#fecaca' : '#c62828',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
                 }}>
-                    ⏰ Token expired ({getTimeSinceExpiry()}), please re-sync.
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>Token expired ({getTimeSinceExpiry()}), please re-sync.</span>
                 </div>
             )}
 
@@ -421,7 +455,7 @@ function Popup() {
                             height: '40px',
                             animation: 'spin 1s linear infinite'
                         }}></div>
-                        <div style={{ marginTop: '16px', color: '#666', fontSize: '14px' }}>Loading accounts...</div>
+                        <div style={{ marginTop: '16px', color: theme.textSecondary, fontSize: '14px' }}>Loading accounts...</div>
                         <style>{`
                             @keyframes spin {
                                 0% { transform: rotate(0deg); }
@@ -430,7 +464,7 @@ function Popup() {
                         `}</style>
                     </div>
                 ) : filteredGroups.length === 0 ? (
-                    <div style={{ color: '#666', textAlign: 'center', marginTop: '20px' }}>
+                    <div style={{ color: theme.textSecondary, textAlign: 'center', marginTop: '20px' }}>
                         {accounts.length === 0 ? (
                             !samlUrl ? (
                                 <div>
@@ -458,20 +492,20 @@ function Popup() {
                         {filteredGroups.map(group => {
                             const isFavorite = favorites.includes(group.accountId)
                             return (
-                                <div key={group.accountId} style={{ marginBottom: '8px', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>
+                                <div key={group.accountId} style={{ marginBottom: '8px', borderBottom: `1px solid ${theme.border}`, paddingBottom: '8px' }}>
                                     <div style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                         <div style={{ display: 'flex', alignItems: 'baseline' }}>
                                             {group.accountName && group.accountName !== 'Unknown Account' ? (
                                                 <>
-                                                    <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
+                                                    <span style={{ fontWeight: 'bold', fontSize: '14px', color: theme.text }}>
                                                         {cleanAccountName(group.accountName)}
                                                     </span>
-                                                    <span style={{ color: '#888', fontSize: '12px', marginLeft: '8px', fontWeight: 'bold' }}>
+                                                    <span style={{ color: theme.textSecondary, fontSize: '12px', marginLeft: '8px', fontWeight: 'bold' }}>
                                                         ({group.accountId})
                                                     </span>
                                                 </>
                                             ) : (
-                                                <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
+                                                <span style={{ fontWeight: 'bold', fontSize: '14px', color: theme.text }}>
                                                     {group.accountId}
                                                 </span>
                                             )}
@@ -483,7 +517,7 @@ function Popup() {
                                                 border: 'none',
                                                 cursor: 'pointer',
                                                 padding: '4px',
-                                                color: isFavorite ? '#FFD700' : '#ccc',
+                                                color: isFavorite ? '#FFD700' : (darkMode ? '#4b5563' : '#ccc'),
                                                 fontSize: '18px',
                                                 lineHeight: 1,
                                                 marginTop: '4px'
@@ -506,16 +540,16 @@ function Popup() {
                                                     style={{
                                                         padding: '4px 10px',
                                                         borderRadius: '12px',
-                                                        border: '1px solid #ddd',
-                                                        backgroundColor: isDisabled ? '#e0e0e0' : '#f5f5f5',
+                                                        border: `1px solid ${darkMode ? '#4b5563' : '#ddd'}`,
+                                                        backgroundColor: isDisabled ? theme.buttonDisabled : theme.buttonBg,
                                                         cursor: (isDisabled || isLoadingThisRole) ? 'not-allowed' : 'pointer',
                                                         fontSize: '12px',
-                                                        color: '#333',
+                                                        color: theme.roleText,
                                                         transition: 'background-color 0.2s',
                                                         opacity: isDisabled ? 0.5 : 1
                                                     }}
-                                                    onMouseEnter={(e) => !(isDisabled || isLoadingThisRole) && (e.currentTarget.style.backgroundColor = '#e0e0e0')}
-                                                    onMouseLeave={(e) => !(isDisabled || isLoadingThisRole) && (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                                                    onMouseEnter={(e) => !(isDisabled || isLoadingThisRole) && (e.currentTarget.style.backgroundColor = theme.buttonHover)}
+                                                    onMouseLeave={(e) => !(isDisabled || isLoadingThisRole) && (e.currentTarget.style.backgroundColor = theme.buttonBg)}
                                                 >
                                                     {isLoadingThisRole ? '⟳ ' : ''}{cleanRoleName(role.roleName)}
                                                 </button>
@@ -529,7 +563,7 @@ function Popup() {
                 )}
             </div>
             {accounts.length > 0 && (
-                <div style={{ marginTop: '10px', fontSize: '10px', color: '#999', textAlign: 'center' }}>
+                <div style={{ marginTop: '10px', fontSize: '10px', color: theme.textSecondary, textAlign: 'center' }}>
                     {groupedAccounts.length} accounts available
                 </div>
             )}
