@@ -1,16 +1,70 @@
-# React + Vite
+# AWS SAML Sign-in Aid
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A Chrome extension that simplifies and enhances the login experience for AWS accounts via SAML 2.0.
 
-Currently, two official plugins are available:
+## Why AWS SAML Sign-in Aid?
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+If you manage access to multiple AWS accounts and roles through a SAML Identity Provider (like Azure AD, Okta, or others), the standard AWS selection screen can be cumbersome. It often lacks search functionality, doesn't remember your frequently used roles, and doesn't handle session timeouts gracefully.
 
-## React Compiler
+**AWS SAML Sign-in Aid** solves these problems by intercepting the SAML response and providing a modern, searchable, and feature-rich interface to manage your AWS logins.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Key Features
 
-## Expanding the ESLint configuration
+### 🚀 Enhanced Login Interface
+-   **Searchable List**: Instantly filter through hundreds of accounts and roles.
+-   **Favorites**: Pin your most frequently used roles to the top for quick access.
+-   **Clean UI**: A modern, responsive interface with Dark Mode support.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 🔄 Smart Session Management
+-   **Auto-Sync**: Automatically refreshes your SAML token in the background when it expires, so you're always ready to log in.
+-   **Background Sync**: Performs the authentication flow in a background tab, keeping your workflow uninterrupted.
+-   **Token Expiry Warning**: Visual indicators show when your SAML token is about to expire or has expired.
+
+### 🔐 Multi-Session & Security
+-   **Single-Session Mode (Default)**: Ensures a clean slate by logging you out of existing AWS sessions before signing into a new one. This prevents "stale session" errors.
+-   **Multi-Session Support**: Optionally enable support for multiple simultaneous AWS console sessions.
+-   **Sign Out of All Sessions**: A dedicated button (experimental) to securely clear all AWS-related cookies and log out of every active session at once.
+
+### 🎨 Customization
+-   **Name Cleaning**: Use Regular Expressions (Regex) to strip repetitive prefixes or suffixes from Account and Role names (e.g., remove `AWS-Reserved-SSO_`).
+-   **Themes**: Choose between Light and Dark themes to match your system preference.
+
+## Setup & Configuration
+
+1.  **Install the Extension**.
+2.  **Configure SAML URL**:
+    -   Open the extension **Options** (right-click the icon -> Options).
+    -   Enter your Identity Provider's generic SAML login URL (e.g., `https://myapps.microsoft.com/...`).
+    -   This URL is used to initiate the authentication process.
+3.  **Login**:
+    -   Click the extension icon.
+    -   Click the **Sync** button (refresh icon) to start the login flow.
+    -   Once authenticated, your available AWS accounts and roles will appear in the popup.
+
+## Options Explained
+
+### Display Options
+-   **Theme**: Toggle between Light and Dark mode.
+-   **Token Expiry Warning**: Set how many minutes before actual expiry to show a warning (default: 5 mins).
+-   **Clean Account/Role Names**: Enter Regex patterns to remove noise from names.
+    -   *Example*: `^AWS-Reserved-SSO_` removes the common SSO prefix.
+
+### Advanced Options
+-   **Auto-sync on expiry**: If enabled, the extension will attempt to renew your SAML token automatically in the background.
+-   **Sync in background**: Keeps the authentication tab invisible/unfocused during sync.
+-   **Multi-Session Support**:
+    -   **Enabled**: Allows you to open different roles in different tabs/windows without forcing a logout.
+    -   **Disabled**: Forces a logout before every new login to prevent session conflicts.
+    -   **Enable Sign Out of all sessions**: Adds a button to the popup to aggressively clear all AWS cookies and reload tabs.
+
+## Permissions
+
+This extension requires the following permissions to function:
+-   `cookies`: To manage AWS session cookies for logout functionality.
+-   `storage`: To save your settings and favorites.
+-   `webRequest` / `webRequestBlocking`: To intercept the SAML response from your Identity Provider.
+-   `https://*.aws.amazon.com/*`: To perform login actions and clear sessions on AWS domains.
+
+---
+
+_This extension is not affiliated with or endorsed by Amazon Web Services._
