@@ -121,7 +121,7 @@ function Popup() {
             chrome.runtime.openOptionsPage()
             return
         }
-        
+
         if (showLoadingScreen) {
             setLoading(true)
             setAccounts([]) // Clear accounts to show loading state
@@ -162,17 +162,17 @@ function Popup() {
             // Set refreshing state for this specific role
             setRefreshingToken(true)
             setLoadingRole(role.roleArn)
-            
+
             // Trigger sync WITHOUT showing the loading screen
             handleSync(false)
-            
+
             // Wait for sync to complete, then perform login
             let attempts = 0
             const maxAttempts = 30 // 30 seconds max wait
-            
+
             const checkAndLogin = () => {
                 attempts++
-                
+
                 if (attempts > maxAttempts) {
                     console.error('Token refresh timeout')
                     setLoadingRole(null)
@@ -180,22 +180,22 @@ function Popup() {
                     alert('Token refresh timed out. Please try again.')
                     return
                 }
-                
+
                 chrome.storage.local.get(['scrapingComplete', 'lastUpdated'], (items) => {
                     console.log('Checking token refresh status:', {
                         scrapingComplete: items.scrapingComplete,
                         lastUpdated: items.lastUpdated,
                         attempt: attempts
                     })
-                    
+
                     if (items.scrapingComplete !== false && items.lastUpdated) {
                         // Check if token is still expired
                         const now = new Date()
                         const updated = new Date(items.lastUpdated)
                         const diffMins = Math.floor((now - updated) / 60000)
-                        
+
                         console.log('Token age:', diffMins, 'minutes, expiry:', tokenExpiryMinutes, 'minutes')
-                        
+
                         if (diffMins < tokenExpiryMinutes) {
                             // Token refreshed, proceed with login
                             console.log('Token refreshed successfully, proceeding with login')
@@ -210,7 +210,7 @@ function Popup() {
                     }
                 })
             }
-            
+
             // Start checking after a brief delay
             setTimeout(checkAndLogin, 2000)
             return
@@ -244,13 +244,13 @@ function Popup() {
         chrome.storage.local.set({ favorites: newFavorites })
     }
 
-    // Calculate time since last sync
-    const getTimeSinceSync = () => {
+    const getTimeSinceExpiry = () => {
         if (!lastUpdated) return null
         const now = new Date()
         const updated = new Date(lastUpdated)
         const diffMs = now - updated
-        const diffMins = Math.floor(diffMs / 60000)
+        const expiredMs = diffMs - (tokenExpiryMinutes * 60000)
+        const diffMins = Math.floor(expiredMs / 60000)
 
         if (diffMins < 1) return 'just now'
         if (diffMins === 1) return '1 minute ago'
@@ -352,193 +352,193 @@ function Popup() {
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
                     <input
-                            ref={searchInputRef}
-                            type="text"
-                            placeholder="Search"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            style={{
-                                padding: '6px 8px 6px 24px',
-                                borderRadius: '4px',
-                                border: '1px solid #ccc',
-                                width: '100%',
-                                fontSize: '13px',
-                                boxSizing: 'border-box',
-                                textAlign: 'left'
-                            }}
-                        />
-                    </div>
-                    <button
-                        onClick={handleSync}
-                        disabled={loading}
-                        title="Sync Accounts"
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder="Search"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '4px',
-                            color: '#2274A5',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            opacity: loading ? 0.5 : 1
+                            padding: '6px 8px 6px 24px',
+                            borderRadius: '4px',
+                            border: '1px solid #ccc',
+                            width: '100%',
+                            fontSize: '13px',
+                            boxSizing: 'border-box',
+                            textAlign: 'left'
                         }}
-                    >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M23 4v6h-6"></path>
-                            <path d="M1 20v-6h6"></path>
-                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                        </svg>
-                    </button>
+                    />
                 </div>
+                <button
+                    onClick={handleSync}
+                    disabled={loading}
+                    title="Sync Accounts"
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        color: '#2274A5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: loading ? 0.5 : 1
+                    }}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M23 4v6h-6"></path>
+                        <path d="M1 20v-6h6"></path>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                </button>
+            </div>
 
 
-                <hr style={{ border: 'none', borderBottom: '1px solid #999', margin: '8px 0 8px 0', width: '100%' }} />
+            <hr style={{ border: 'none', borderBottom: '1px solid #999', margin: '8px 0 8px 0', width: '100%' }} />
 
-                {/* Token expiry warning */}
-                {tokenExpired && accounts.length > 0 && (
-                    <div style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#ffebee',
-                        border: '1px solid #ef5350',
-                        borderRadius: '4px',
-                        margin: '0 0 8px 0',
-                        fontSize: '12px',
-                        color: '#c62828'
-                    }}>
-                        ⚠️ Token expired ({getTimeSinceSync()}), please re-sync.
-                    </div>
-                )}
+            {/* Token expiry warning */}
+            {tokenExpired && accounts.length > 0 && (
+                <div style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#ffebee',
+                    border: '1px solid #ef5350',
+                    borderRadius: '4px',
+                    margin: '0 0 8px 0',
+                    fontSize: '12px',
+                    color: '#c62828'
+                }}>
+                    ⏰ Token expired ({getTimeSinceExpiry()}), please re-sync.
+                </div>
+            )}
 
-                <div style={{ flex: 1, overflowY: 'auto' }}>
-                    {loading && accounts.length === 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '40px' }}>
-                            <div style={{
-                                border: '3px solid #f3f3f3',
-                                borderTop: '3px solid #2274A5',
-                                borderRadius: '50%',
-                                width: '40px',
-                                height: '40px',
-                                animation: 'spin 1s linear infinite'
-                            }}></div>
-                            <div style={{ marginTop: '16px', color: '#666', fontSize: '14px' }}>Loading accounts...</div>
-                            <style>{`
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+                {loading && accounts.length === 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '40px' }}>
+                        <div style={{
+                            border: '3px solid #f3f3f3',
+                            borderTop: '3px solid #2274A5',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            animation: 'spin 1s linear infinite'
+                        }}></div>
+                        <div style={{ marginTop: '16px', color: '#666', fontSize: '14px' }}>Loading accounts...</div>
+                        <style>{`
                             @keyframes spin {
                                 0% { transform: rotate(0deg); }
                                 100% { transform: rotate(360deg); }
                             }
                         `}</style>
-                        </div>
-                    ) : filteredGroups.length === 0 ? (
-                        <div style={{ color: '#666', textAlign: 'center', marginTop: '20px' }}>
-                            {accounts.length === 0 ? (
-                                !samlUrl ? (
-                                    <div>
-                                        <div style={{ marginBottom: '8px' }}>No AWS SAML Sign-In URL configured.</div>
-                                        <a
-                                            href="#"
-                                            onClick={(e) => {
-                                                e.preventDefault()
-                                                chrome.runtime.openOptionsPage()
-                                            }}
-                                            style={{ color: '#2274A5', textDecoration: 'none', fontWeight: '500' }}
-                                        >
-                                            Configure AWS SAML Sign-In URL
-                                        </a>
-                                    </div>
-                                ) : (
-                                    'No accounts found. Click Sync to load.'
-                                )
+                    </div>
+                ) : filteredGroups.length === 0 ? (
+                    <div style={{ color: '#666', textAlign: 'center', marginTop: '20px' }}>
+                        {accounts.length === 0 ? (
+                            !samlUrl ? (
+                                <div>
+                                    <div style={{ marginBottom: '8px' }}>No AWS SAML Sign-In URL configured.</div>
+                                    <a
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            chrome.runtime.openOptionsPage()
+                                        }}
+                                        style={{ color: '#2274A5', textDecoration: 'none', fontWeight: '500' }}
+                                    >
+                                        Configure AWS SAML Sign-In URL
+                                    </a>
+                                </div>
                             ) : (
-                                'No matches found.'
-                            )}
-                        </div>
-                    ) : (
-                        <div>
-                            {filteredGroups.map(group => {
-                                const isFavorite = favorites.includes(group.accountId)
-                                return (
-                                    <div key={group.accountId} style={{ marginBottom: '8px', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>
-                                        <div style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                                                {group.accountName && group.accountName !== 'Unknown Account' ? (
-                                                    <>
-                                                        <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
-                                                            {cleanAccountName(group.accountName)}
-                                                        </span>
-                                                        <span style={{ color: '#888', fontSize: '12px', marginLeft: '8px', fontWeight: 'bold' }}>
-                                                            ({group.accountId})
-                                                        </span>
-                                                    </>
-                                                ) : (
+                                'No accounts found. Click Sync to load.'
+                            )
+                        ) : (
+                            'No matches found.'
+                        )}
+                    </div>
+                ) : (
+                    <div>
+                        {filteredGroups.map(group => {
+                            const isFavorite = favorites.includes(group.accountId)
+                            return (
+                                <div key={group.accountId} style={{ marginBottom: '8px', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>
+                                    <div style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                                            {group.accountName && group.accountName !== 'Unknown Account' ? (
+                                                <>
                                                     <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
-                                                        {group.accountId}
+                                                        {cleanAccountName(group.accountName)}
                                                     </span>
-                                                )}
-                                            </div>
-                                            <button
-                                                onClick={() => handleToggleFavorite(group.accountId)}
-                                                style={{
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    cursor: 'pointer',
-                                                    padding: '4px',
-                                                    color: isFavorite ? '#FFD700' : '#ccc',
-                                                    fontSize: '18px',
-                                                    lineHeight: 1,
-                                                    marginTop: '4px'
-                                                }}
-                                                title={isFavorite ? "Unfavorite" : "Favorite"}
-                                            >
-                                                ★
-                                            </button>
+                                                    <span style={{ color: '#888', fontSize: '12px', marginLeft: '8px', fontWeight: 'bold' }}>
+                                                        ({group.accountId})
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>
+                                                    {group.accountId}
+                                                </span>
+                                            )}
                                         </div>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                            {group.roles.map(role => {
-                                                const isLoadingThisRole = loadingRole === role.roleArn;
-                                                const isDisabled = refreshingToken && !isLoadingThisRole;
-                                                return (
-                                                    <button
-                                                        key={role.roleArn}
-                                                        onClick={() => handleRoleClick(role)}
-                                                        disabled={isDisabled || isLoadingThisRole}
-                                                        title={role.roleArn}
-                                                        style={{
-                                                            padding: '4px 10px',
-                                                            borderRadius: '12px',
-                                                            border: '1px solid #ddd',
-                                                            backgroundColor: isDisabled ? '#e0e0e0' : '#f5f5f5',
-                                                            cursor: (isDisabled || isLoadingThisRole) ? 'not-allowed' : 'pointer',
-                                                            fontSize: '12px',
-                                                            color: '#333',
-                                                            transition: 'background-color 0.2s',
-                                                            opacity: isDisabled ? 0.5 : 1
-                                                        }}
-                                                        onMouseEnter={(e) => !(isDisabled || isLoadingThisRole) && (e.currentTarget.style.backgroundColor = '#e0e0e0')}
-                                                        onMouseLeave={(e) => !(isDisabled || isLoadingThisRole) && (e.currentTarget.style.backgroundColor = '#f5f5f5')}
-                                                    >
-                                                        {isLoadingThisRole ? '⟳ ' : ''}{cleanRoleName(role.roleName)}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
+                                        <button
+                                            onClick={() => handleToggleFavorite(group.accountId)}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                padding: '4px',
+                                                color: isFavorite ? '#FFD700' : '#ccc',
+                                                fontSize: '18px',
+                                                lineHeight: 1,
+                                                marginTop: '4px'
+                                            }}
+                                            title={isFavorite ? "Unfavorite" : "Favorite"}
+                                        >
+                                            ★
+                                        </button>
                                     </div>
-                                )
-                            })}
-                        </div>
-                    )}
-                </div>
-                {accounts.length > 0 && (
-                    <div style={{ marginTop: '10px', fontSize: '10px', color: '#999', textAlign: 'center' }}>
-                        {groupedAccounts.length} accounts available
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        {group.roles.map(role => {
+                                            const isLoadingThisRole = loadingRole === role.roleArn;
+                                            const isDisabled = refreshingToken && !isLoadingThisRole;
+                                            return (
+                                                <button
+                                                    key={role.roleArn}
+                                                    onClick={() => handleRoleClick(role)}
+                                                    disabled={isDisabled || isLoadingThisRole}
+                                                    title={role.roleArn}
+                                                    style={{
+                                                        padding: '4px 10px',
+                                                        borderRadius: '12px',
+                                                        border: '1px solid #ddd',
+                                                        backgroundColor: isDisabled ? '#e0e0e0' : '#f5f5f5',
+                                                        cursor: (isDisabled || isLoadingThisRole) ? 'not-allowed' : 'pointer',
+                                                        fontSize: '12px',
+                                                        color: '#333',
+                                                        transition: 'background-color 0.2s',
+                                                        opacity: isDisabled ? 0.5 : 1
+                                                    }}
+                                                    onMouseEnter={(e) => !(isDisabled || isLoadingThisRole) && (e.currentTarget.style.backgroundColor = '#e0e0e0')}
+                                                    onMouseLeave={(e) => !(isDisabled || isLoadingThisRole) && (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                                                >
+                                                    {isLoadingThisRole ? '⟳ ' : ''}{cleanRoleName(role.roleName)}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )
+                        })}
                     </div>
                 )}
             </div>
-        )
-    }
-
-    ReactDOM.createRoot(document.getElementById('root')).render(
-        <React.StrictMode>
-            <Popup />
-        </React.StrictMode>,
+            {accounts.length > 0 && (
+                <div style={{ marginTop: '10px', fontSize: '10px', color: '#999', textAlign: 'center' }}>
+                    {groupedAccounts.length} accounts available
+                </div>
+            )}
+        </div>
     )
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+        <Popup />
+    </React.StrictMode>,
+)
