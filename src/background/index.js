@@ -86,27 +86,26 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 })
 
 // Content script function to be injected
+// Content script function to be injected
 function scrapeAccountNames() {
     // Helper to clean up account name
     const cleanName = (name) => {
         return name.replace(/^Account:\s*/i, '').trim()
     }
 
-    try {
-        const accounts = []
-        const debugLogs = []
+    const debugLogs = []
+    debugLogs.push('Scraper started')
+    debugLogs.push('URL: ' + window.location.href)
 
-        debugLogs.push('Scraper started')
-        debugLogs.push('URL: ' + window.location.href)
+    const findAccounts = () => {
+        const accounts = []
 
         // Strategy 1: Standard .saml-account-name
         const accountNameElements = document.querySelectorAll('.saml-account-name')
-        debugLogs.push(`Found ${accountNameElements.length} .saml-account-name elements`)
 
         if (accountNameElements.length > 0) {
             accountNameElements.forEach(el => {
                 const text = el.innerText
-                debugLogs.push(`Element text: ${text}`)
                 const match = text.match(/(.*)\((\d{12})\)/)
                 if (match) {
                     accounts.push({
@@ -120,27 +119,44 @@ function scrapeAccountNames() {
         // Strategy 2: Look for saml-account class
         if (accounts.length === 0) {
             const samlAccounts = document.querySelectorAll('.saml-account')
-            debugLogs.push(`Found ${samlAccounts.length} .saml-account elements`)
+            // We need to parse the text inside saml-account
             samlAccounts.forEach(el => {
-                debugLogs.push(`Account row text: ${el.innerText}`)
+                const text = el.innerText
+                // Usually contains name and id
+                const match = text.match(/(.*)\((\d{12})\)/)
+                if (match) {
+                    accounts.push({
+                        name: cleanName(match[1]),
+                        id: match[2]
+                    })
+                }
             })
         }
 
         // Strategy 3: Search for any element with an account ID pattern
         if (accounts.length === 0) {
-            debugLogs.push('Strategy 3: Walking DOM for IDs')
             const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
             let node;
             while (node = walker.nextNode()) {
                 if (/\d{12}/.test(node.nodeValue)) {
-                    debugLogs.push(`Found ID in text node: "${node.nodeValue.trim()}" Parent: ${node.parentElement.tagName}.${node.parentElement.className}`)
+                    // Check parent for context
+                    const parent = node.parentElement
+                    if (parent) {
+                        const text = parent.innerText
+                        const match = text.match(/(.*)\((\d{12})\)/)
+                        if (match) {
+                            accounts.push({
+                                name: cleanName(match[1]),
+                                id: match[2]
+                            })
+                        }
+                    }
                 }
             }
         }
 
         // Strategy 4: Brute force regex on body text
         if (accounts.length === 0) {
-            debugLogs.push('Strategy 4: Brute force regex on body text')
             const bodyText = document.body.innerText
             // Look for lines like "Account Name (123456789012)"
             const regex = /([^\n]+)\s\((\d{12})\)/g
@@ -151,22 +167,65 @@ function scrapeAccountNames() {
 
                 // Filter out likely false positives (too long, or "Account: (123...)")
                 if (name.length < 100 && name.length > 0) {
-                    debugLogs.push(`Found match in body text: ${name} (${id})`)
                     accounts.push({ name, id })
                 }
             }
         }
 
+        // Deduplicate by ID
+        const uniqueAccounts = []
+        const seenIds = new Set()
+        accounts.forEach(acc => {
+            if (!seenIds.has(acc.id)) {
+                seenIds.add(acc.id)
+                uniqueAccounts.push(acc)
+            }
+        })
+
+        return uniqueAccounts
+    }
+
+    const report = (accounts, source) => {
+        debugLogs.push(`Reporting ${accounts.length} accounts from ${source}`)
         chrome.runtime.sendMessage({
             action: 'updateAccountNames',
             accounts: accounts,
             debug: debugLogs
         })
-
-    } catch (e) {
-        console.error('Scraping failed', e)
-        chrome.runtime.sendMessage({ action: 'updateAccountNames', accounts: [], error: e.message })
     }
+
+    // Try immediately
+    let accounts = findAccounts()
+    if (accounts.length > 0) {
+        report(accounts, 'Immediate scan')
+        return
+    }
+
+    debugLogs.push('No accounts found immediately, starting MutationObserver')
+
+    // If not found, wait for DOM changes
+    let observer = new MutationObserver((mutations, obs) => {
+        accounts = findAccounts()
+        if (accounts.length > 0) {
+            debugLogs.push('Found accounts via MutationObserver')
+            obs.disconnect()
+            observer = null
+            report(accounts, 'MutationObserver')
+        }
+    })
+
+    observer.observe(document.body, { childList: true, subtree: true })
+
+    // Timeout after 5 seconds
+    setTimeout(() => {
+        if (observer) {
+            observer.disconnect()
+            debugLogs.push('MutationObserver timed out')
+            // Try one last time
+            accounts = findAccounts()
+            report(accounts, 'Timeout fallback')
+        }
+    }, 5000)
 }
 
 // Handle scraped names
@@ -180,9 +239,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.error('Scraper Error:', request.error)
         }
 
-        chrome.storage.local.get(['availableRoles', 'pendingAuthTabId'], (result) => {
+        chrome.storage.local.get(['availableRoles', 'pendingAuthTabId', 'syncTabIds'], (result) => {
             const roles = result.availableRoles || []
             const pendingTabId = result.pendingAuthTabId
+            const syncTabIds = result.syncTabIds || []
 
             // Update roles with names
             const updatedRoles = roles.map(role => {
@@ -203,14 +263,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 scrapingComplete: true // Mark scraping as complete
             }, () => {
                 console.log('Roles updated with account names')
-                // Now close the tab
-                if (sender.tab && sender.tab.id) {
-                    chrome.tabs.remove(sender.tab.id)
-                } else if (pendingTabId) {
-                    chrome.tabs.remove(pendingTabId)
+
+                // Determine which tab we are dealing with
+                const tabId = sender.tab?.id || pendingTabId
+
+                // Only close the tab if it was registered as a sync tab
+                if (tabId && syncTabIds.includes(tabId)) {
+                    console.log(`Tab ${tabId} is a sync tab. Closing it.`)
+                    chrome.tabs.remove(tabId)
+
+                    // Remove from syncTabIds
+                    const newSyncTabs = syncTabIds.filter(id => id !== tabId)
+                    chrome.storage.local.set({ syncTabIds: newSyncTabs })
+                } else {
+                    console.log(`Tab ${tabId} is NOT a sync tab. Leaving it open.`)
                 }
             })
         })
+    } else if (request.action === 'registerSyncTab') {
+        const tabId = request.tabId
+        if (tabId) {
+            chrome.storage.local.get(['syncTabIds'], (result) => {
+                const tabs = result.syncTabIds || []
+                if (!tabs.includes(tabId)) {
+                    tabs.push(tabId)
+                    chrome.storage.local.set({ syncTabIds: tabs }, () => {
+                        console.log('Registered sync tab:', tabId)
+                    })
+                }
+            })
+        }
     }
 })
 
@@ -423,6 +505,15 @@ function checkAndSyncToken() {
                     top: 10000
                 }, (window) => {
                     console.log('Auto-sync window created:', window?.id)
+                    // Register the tab in this window as a sync tab
+                    if (window && window.tabs && window.tabs[0]) {
+                        const tabId = window.tabs[0].id
+                        chrome.storage.local.get(['syncTabIds'], (result) => {
+                            const tabs = result.syncTabIds || []
+                            tabs.push(tabId)
+                            chrome.storage.local.set({ syncTabIds: tabs })
+                        })
+                    }
                 })
             }
         })

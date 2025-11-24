@@ -176,6 +176,9 @@ function Popup() {
                 active: !useBackgroundSync // Background sync = inactive tab
             }, (tab) => {
                 console.log('Sync tab created:', tab?.id, 'Active:', !useBackgroundSync)
+                if (tab && tab.id) {
+                    chrome.runtime.sendMessage({ action: 'registerSyncTab', tabId: tab.id })
+                }
             })
         })
     }
