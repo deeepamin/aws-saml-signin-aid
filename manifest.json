@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "AWS SAML Sign-In Aid",
     "description": "Easily access your AWS accounts from any SAML provider with a click of a button.",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "action": {
         "default_popup": "src/popup/popup.html",
         "default_icon": {
